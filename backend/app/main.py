@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .database import Base, engine
+from .routers import transactions
+
 app = FastAPI(
     title="Pennywise API",
     description="Personal finance tracker API",
@@ -14,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+Base.metadata.create_all(bind=engine)
+app.include_router(transactions.router)
 
 
 @app.get("/api/health")
