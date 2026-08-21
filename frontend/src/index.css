@@ -1146,6 +1146,40 @@ select:focus {
   padding: 8px 22px;
 }
 
+/* ---------- Balance chart ---------- */
+
+.balance-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 8px;
+}
+
+.balance-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.balance-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-labels .up { color: var(--accent); }
+.balance-labels .down { color: var(--danger); }
+
+.chart-legend.axis {
+  justify-content: space-between;
+  max-width: 100%;
+}
+
 .tx time {
   color: var(--text-dim);
   font-size: 0.85rem;

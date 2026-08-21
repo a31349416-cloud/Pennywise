@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { Budgets } from "./components/Budgets";
+import { BalanceChart } from "./components/BalanceChart";
 import { CurrencySelect } from "./components/CurrencySelect";
 import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
@@ -141,6 +142,7 @@ export default function App() {
           <div className="dashboard">
             <MonthlyChart data={monthly} selected={monthKey} />
             <DonutChart data={categories} />
+            <BalanceChart transactions={transactions} monthRange={range} />
           </div>
           <Budgets budgets={budgets} onChanged={refresh} />
           <TransactionList
