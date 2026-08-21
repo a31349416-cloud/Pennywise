@@ -8,18 +8,30 @@ interface Props {
   prevSummary: Summary | null;
 }
 
-function Delta({ current, previous }: { current: number; previous: number }) {
+function Delta({
+  current,
+  previous,
+  goodWhenUp,
+}: {
+  current: number;
+  previous: number;
+  goodWhenUp: boolean;
+}) {
   const { t } = useI18n();
   if (previous <= 0) {
-    return current > 0 ? <span className="delta up">▲ {t("newLabel")}</span> : null;
+    return current > 0 ? (
+      <span className={`delta ${goodWhenUp ? "up" : "down"}`}>▲ {t("newLabel")}</span>
+    ) : null;
   }
   const pct = ((current - previous) / previous) * 100;
   if (Math.abs(pct) < 0.5) {
     return <span className="delta flat">→ 0%</span>;
   }
   const up = pct > 0;
+  // "up" class means good news; direction and goodness differ for expenses.
+  const cls = up === goodWhenUp ? "up" : "down";
   return (
-    <span className={`delta ${up ? "up" : "down"}`}>
+    <span className={`delta ${cls}`}>
       {up ? "▲" : "▼"} {Math.abs(Math.round(pct))}%
     </span>
   );
@@ -43,13 +55,17 @@ export function SummaryCards({ summary, monthSummary, prevSummary }: Props) {
       label: t("income"),
       value: income,
       className: "income",
-      delta: prevSummary ? <Delta current={income} previous={prevSummary.income} /> : undefined,
+      delta: prevSummary ? (
+        <Delta current={income} previous={prevSummary.income} goodWhenUp={true} />
+      ) : undefined,
     },
     {
       label: t("expense"),
       value: -expense,
       className: "expense",
-      delta: prevSummary ? <Delta current={expense} previous={prevSummary.expense} /> : undefined,
+      delta: prevSummary ? (
+        <Delta current={expense} previous={prevSummary.expense} goodWhenUp={false} />
+      ) : undefined,
     },
   ];
 

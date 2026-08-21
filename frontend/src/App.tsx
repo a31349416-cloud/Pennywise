@@ -14,6 +14,7 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
 import { useI18n } from "./i18n";
+import { currentMonthKey, monthRangeOf, shiftMonthKey } from "./months";
 import { useTheme } from "./useTheme";
 import type {
   Budget,
@@ -22,33 +23,6 @@ import type {
   Summary,
   Transaction,
 } from "./types";
-
-function currentMonthKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-export interface MonthRange {
-  key: string;
-  from: string;
-  to: string;
-}
-
-function monthRangeOf(key: string): MonthRange {
-  const [y, m] = key.split("-").map(Number);
-  const last = new Date(y, m, 0).getDate();
-  return {
-    key,
-    from: `${key}-01`,
-    to: `${key}-${String(last).padStart(2, "0")}`,
-  };
-}
-
-function shiftMonthKey(key: string, delta: number): string {
-  const [y, m] = key.split("-").map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
 
 export default function App() {
   const { t } = useI18n();

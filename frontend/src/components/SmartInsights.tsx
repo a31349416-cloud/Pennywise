@@ -1,3 +1,4 @@
+import { currentMonthKey } from "../months";
 import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { Summary } from "../types";
@@ -7,16 +8,12 @@ interface Props {
   monthSummary: Summary | null;
 }
 
-function currentMonthKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export function SmartInsights({ monthKey, monthSummary }: Props) {
   const { t } = useI18n();
   const { formatMoney } = useCurrency();
 
-  if (!monthSummary || monthSummary.income <= 0 && monthSummary.expense <= 0) {
+  const empty = !monthSummary || (monthSummary.income <= 0 && monthSummary.expense <= 0);
+  if (empty) {
     return null;
   }
 
