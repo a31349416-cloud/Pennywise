@@ -420,6 +420,37 @@ h2 {
   color: var(--danger);
 }
 
+/* ---------- Quick add chips ---------- */
+
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.quick-chips button {
+  border: 1px dashed var(--card-border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-chips button b {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.quick-chips button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .toast {
   position: fixed;
   left: 50%;

@@ -30,6 +30,12 @@ const INCOME_CATEGORIES = [
   "Other",
 ];
 
+const QUICK_PRESETS = [
+  { category: "Food", amount: 100 },
+  { category: "Transport", amount: 50 },
+  { category: "Entertainment", amount: 200 },
+];
+
 export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
   const { t, categoryLabel } = useI18n();
   const [type, setType] = useState<TransactionType>("expense");
@@ -107,9 +113,44 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
     }
   }
 
+  async function quickAdd(preset: { category: string; amount: number }) {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await api.createTransaction({
+        type: "expense",
+        amount: preset.amount,
+        category: preset.category,
+        description: null,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("saveFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <form className={`card form ${editing ? "editing" : ""}`} onSubmit={handleSubmit}>
       <h2>{editing ? t("edit") : t("addTransaction")}</h2>
+
+      {!editing && type === "expense" && (
+        <div className="quick-chips">
+          {QUICK_PRESETS.map((p) => (
+            <button
+              key={p.category + p.amount}
+              type="button"
+              disabled={submitting}
+              onClick={() => quickAdd(p)}
+              title={`${categoryLabel(p.category)} · ${p.amount}`}
+            >
+              {categoryLabel(p.category)} <b>{p.amount}</b>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="type-toggle" role="tablist">
         <button
