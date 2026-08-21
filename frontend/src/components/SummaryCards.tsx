@@ -1,3 +1,4 @@
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { Summary } from "../types";
 
@@ -7,6 +8,7 @@ interface Props {
 
 export function SummaryCards({ summary }: Props) {
   const { t } = useI18n();
+  const { formatMoney } = useCurrency();
   const cards = [
     { label: t("balance"), value: summary.balance, className: "balance" },
     { label: t("income"), value: summary.income, className: "income" },
@@ -19,7 +21,8 @@ export function SummaryCards({ summary }: Props) {
         <div key={c.label} className={`card stat ${c.className}`}>
           <span className="stat-label">{c.label}</span>
           <span className="stat-value">
-            {c.value < 0 ? "−" : ""}${Math.abs(c.value).toFixed(2)}
+            {c.value < 0 ? "−" : ""}
+            {formatMoney(Math.abs(c.value))}
           </span>
         </div>
       ))}

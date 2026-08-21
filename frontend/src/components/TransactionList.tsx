@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { Transaction, TransactionFilters } from "../types";
 
@@ -9,13 +10,14 @@ interface Props {
   onEdit: (tx: Transaction) => void;
 }
 
-function formatAmount(tx: Transaction): string {
-  const sign = tx.type === "income" ? "+" : "−";
-  return `${sign}$${tx.amount.toFixed(2)}`;
-}
-
 export function TransactionList({ transactions, onChanged, onEdit }: Props) {
   const { lang, t, categoryLabel } = useI18n();
+  const { formatMoney } = useCurrency();
+
+  function formatAmount(tx: Transaction): string {
+    const sign = tx.type === "income" ? "+" : "−";
+    return `${sign}${formatMoney(tx.amount)}`;
+  }
 
   function formatDate(iso: string): string {
     return new Date(`${iso}T00:00:00`).toLocaleDateString(

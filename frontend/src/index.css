@@ -141,6 +141,14 @@ h2 {
   gap: 8px;
 }
 
+.currency-select {
+  width: auto !important;
+  padding: 7px 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  max-width: 130px;
+}
+
 .theme-toggle {
   background: var(--bg-soft);
   border: 1px solid var(--card-border);

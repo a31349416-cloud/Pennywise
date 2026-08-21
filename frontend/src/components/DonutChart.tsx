@@ -1,3 +1,4 @@
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { CategoryStat } from "../types";
 
@@ -17,6 +18,7 @@ const COLORS = [
 
 export function DonutChart({ data }: Props) {
   const { t, categoryLabel } = useI18n();
+  const { formatMoney } = useCurrency();
   const total = data.reduce((sum, d) => sum + d.total, 0);
 
   if (data.length === 0) {
@@ -53,14 +55,14 @@ export function DonutChart({ data }: Props) {
                 strokeDashoffset={-offset}
                 transform="rotate(-90 80 80)"
               >
-                <title>{`${categoryLabel(d.category)}: $${d.total.toFixed(2)}`}</title>
+                <title>{`${categoryLabel(d.category)}: ${formatMoney(d.total)}`}</title>
               </circle>
             );
             offset += dash;
             return el;
           })}
           <text x="80" y="76" textAnchor="middle" className="donut-total">
-            ${total.toFixed(0)}
+            {formatMoney(total)}
           </text>
           <text x="80" y="94" textAnchor="middle" className="donut-caption">
             {t("expense")}

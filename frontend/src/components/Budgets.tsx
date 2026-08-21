@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { Budget } from "../types";
 
@@ -10,6 +11,7 @@ interface Props {
 
 export function Budgets({ budgets, onChanged }: Props) {
   const { t, categoryLabel } = useI18n();
+  const { formatMoney } = useCurrency();
   const [categories, setCategories] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [limit, setLimit] = useState("");
@@ -100,7 +102,7 @@ export function Budgets({ budgets, onChanged }: Props) {
                     {over && <em className="over-badge">{t("overBudget")}</em>}
                   </span>
                   <span className="budget-sums">
-                    ${b.spent.toFixed(2)} / ${b.monthly_limit.toFixed(2)}
+                    {formatMoney(b.spent)} / {formatMoney(b.monthly_limit)}
                   </span>
                   <button
                     className="btn-delete"

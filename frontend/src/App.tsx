@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { Budgets } from "./components/Budgets";
+import { CurrencySelect } from "./components/CurrencySelect";
 import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthlyChart } from "./components/MonthlyChart";
@@ -63,6 +64,7 @@ export default function App() {
             <span className="logo">¢</span> Pennywise
           </h1>
           <div className="header-controls">
+            <CurrencySelect />
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <LanguageToggle />
           </div>

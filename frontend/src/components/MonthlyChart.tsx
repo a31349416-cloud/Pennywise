@@ -1,3 +1,4 @@
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { MonthlyStat } from "../types";
 
@@ -7,6 +8,7 @@ interface Props {
 
 export function MonthlyChart({ data }: Props) {
   const { t, monthLabel } = useI18n();
+  const { formatMoney } = useCurrency();
 
   if (data.length === 0) {
     return (
@@ -28,7 +30,7 @@ export function MonthlyChart({ data }: Props) {
       </div>
       <div className="bars">
         {data.map((d) => (
-          <div key={d.month} className="bar-group" title={`${monthLabel(d.month)}: +$${d.income.toFixed(2)} / −$${d.expense.toFixed(2)}`}>
+          <div key={d.month} className="bar-group" title={`${monthLabel(d.month)}: +${formatMoney(d.income)} / −${formatMoney(d.expense)}`}>
             <div className="bar-pair">
               <div
                 className="bar income"
