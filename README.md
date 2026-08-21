@@ -16,7 +16,18 @@ frontend/  — React SPA (дашборд, список транзакцій, ф�
 
 ## Запуск
 
-### Бекенд
+Одна команда — запускає бекенд і фронтенд разом (за потреби сама встановлює залежності):
+
+```bash
+./dev.sh
+```
+
+- Додаток: http://localhost:5173
+- API docs: http://localhost:8000/docs
+
+### Окремо
+
+#### Бекенд
 
 ```bash
 cd backend
@@ -28,7 +39,7 @@ uvicorn app.main:app --reload
 
 API буде доступне на http://localhost:8000/docs
 
-### Фронтенд
+#### Фронтенд
 
 ```bash
 cd frontend
