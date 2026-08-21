@@ -255,7 +255,10 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       )}
 
       {groups.length === 0 ? (
-        <p className="empty">{t("noTransactions")}</p>
+        <p className="empty">
+          {hasFilters ? t("noResults") : t("noTransactions")}
+          {!hasFilters && <span className="empty-hint">{t("noTransactionsHint")}</span>}
+        </p>
       ) : (
         <>
           {groups.slice(0, visibleDays).map((g) => (
