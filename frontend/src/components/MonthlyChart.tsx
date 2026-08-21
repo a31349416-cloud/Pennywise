@@ -1,25 +1,18 @@
+import { useI18n } from "../i18n";
 import type { MonthlyStat } from "../types";
 
 interface Props {
   data: MonthlyStat[];
 }
 
-const MONTH_NAMES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-function monthLabel(month: string): string {
-  const [year, m] = month.split("-").map(Number);
-  return `${MONTH_NAMES[m - 1]} ${String(year).slice(2)}`;
-}
-
 export function MonthlyChart({ data }: Props) {
+  const { t, monthLabel } = useI18n();
+
   if (data.length === 0) {
     return (
       <section className="card chart">
-        <h2>Monthly activity</h2>
-        <p className="empty">Not enough data yet.</p>
+        <h2>{t("monthlyActivity")}</h2>
+        <p className="empty">{t("notEnoughData")}</p>
       </section>
     );
   }
@@ -28,10 +21,10 @@ export function MonthlyChart({ data }: Props) {
 
   return (
     <section className="card chart">
-      <h2>Monthly activity</h2>
+      <h2>{t("monthlyActivity")}</h2>
       <div className="chart-legend">
-        <span><i className="dot income" /> Income</span>
-        <span><i className="dot expense" /> Expenses</span>
+        <span><i className="dot income" /> {t("income")}</span>
+        <span><i className="dot expense" /> {t("expense")}</span>
       </div>
       <div className="bars">
         {data.map((d) => (

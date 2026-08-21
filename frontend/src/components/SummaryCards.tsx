@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import type { Summary } from "../types";
 
 interface Props {
@@ -5,10 +6,11 @@ interface Props {
 }
 
 export function SummaryCards({ summary }: Props) {
+  const { t } = useI18n();
   const cards = [
-    { label: "Balance", value: summary.balance, className: "balance" },
-    { label: "Income", value: summary.income, className: "income" },
-    { label: "Expenses", value: -summary.expense, className: "expense" },
+    { label: t("balance"), value: summary.balance, className: "balance" },
+    { label: t("income"), value: summary.income, className: "income" },
+    { label: t("expense"), value: -summary.expense, className: "expense" },
   ];
 
   return (

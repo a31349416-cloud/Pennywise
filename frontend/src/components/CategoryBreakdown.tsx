@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import type { CategoryStat } from "../types";
 
 interface Props {
@@ -5,13 +6,14 @@ interface Props {
 }
 
 export function CategoryBreakdown({ data }: Props) {
+  const { t, categoryLabel } = useI18n();
   const total = data.reduce((sum, d) => sum + d.total, 0);
 
   return (
     <section className="card categories">
-      <h2>By category</h2>
+      <h2>{t("byCategory")}</h2>
       {data.length === 0 ? (
-        <p className="empty">No expenses recorded.</p>
+        <p className="empty">{t("noExpenses")}</p>
       ) : (
         <ul>
           {data.map((d) => {
@@ -19,7 +21,7 @@ export function CategoryBreakdown({ data }: Props) {
             return (
               <li key={d.category}>
                 <div className="cat-row">
-                  <span>{d.category}</span>
+                  <span>{categoryLabel(d.category)}</span>
                   <span>${d.total.toFixed(2)}</span>
                 </div>
                 <div className="cat-bar">

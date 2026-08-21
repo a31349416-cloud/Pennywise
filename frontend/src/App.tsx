@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { CategoryBreakdown } from "./components/CategoryBreakdown";
+import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthlyChart } from "./components/MonthlyChart";
 import { SummaryCards } from "./components/SummaryCards";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
+import { useI18n } from "./i18n";
 import type {
   CategoryStat,
   MonthlyStat,
@@ -13,6 +15,7 @@ import type {
 } from "./types";
 
 export default function App() {
+  const { t } = useI18n();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [monthly, setMonthly] = useState<MonthlyStat[]>([]);
@@ -34,12 +37,10 @@ export default function App() {
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? `${err.message}. Is the backend running on port 8000?`
-          : "Failed to load data",
+        err instanceof Error ? `${err.message}. ${t("backendError")}` : t("backendError"),
       );
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refresh();
@@ -48,10 +49,13 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>
-          <span className="logo">¢</span> Pennywise
-        </h1>
-        <p className="tagline">Track every penny</p>
+        <div className="header-row">
+          <h1>
+            <span className="logo">¢</span> Pennywise
+          </h1>
+          <LanguageToggle />
+        </div>
+        <p className="tagline">{t("tagline")}</p>
       </header>
 
       {error && <div className="error-banner">{error}</div>}

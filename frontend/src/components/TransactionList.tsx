@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { useI18n } from "../i18n";
 import type { Transaction, TransactionFilters } from "../types";
 
 interface Props {
@@ -13,6 +14,7 @@ function formatAmount(tx: Transaction): string {
 }
 
 export function TransactionList({ transactions, onChanged }: Props) {
+  const { t, categoryLabel } = useI18n();
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -42,7 +44,7 @@ export function TransactionList({ transactions, onChanged }: Props) {
   return (
     <section className="card list">
       <div className="list-header">
-        <h2>Transactions</h2>
+        <h2>{t("transactions")}</h2>
         <div className="filters">
           <select
             value={filters.type ?? ""}
@@ -50,19 +52,19 @@ export function TransactionList({ transactions, onChanged }: Props) {
               setFilters((f) => ({ ...f, type: e.target.value as TransactionFilters["type"] }))
             }
           >
-            <option value="">All types</option>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
+            <option value="">{t("allTypes")}</option>
+            <option value="income">{t("income")}</option>
+            <option value="expense">{t("expense")}</option>
           </select>
 
           <select
             value={filters.category ?? ""}
             onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
           >
-            <option value="">All categories</option>
+            <option value="">{t("allCategories")}</option>
             {categories.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {categoryLabel(c)}
               </option>
             ))}
           </select>
@@ -80,21 +82,21 @@ export function TransactionList({ transactions, onChanged }: Props) {
 
           {hasFilters && (
             <button className="btn-ghost" onClick={() => setFilters({})}>
-              Reset
+              {t("reset")}
             </button>
           )}
         </div>
       </div>
 
       {transactions.length === 0 ? (
-        <p className="empty">No transactions yet. Add your first one!</p>
+        <p className="empty">{t("noTransactions")}</p>
       ) : (
         <ul>
           {transactions.map((tx) => (
             <li key={tx.id} className={`tx ${tx.type}`}>
               <div className="tx-icon">{tx.type === "income" ? "↓" : "↑"}</div>
               <div className="tx-info">
-                <span className="tx-category">{tx.category}</span>
+                <span className="tx-category">{categoryLabel(tx.category)}</span>
                 {tx.description && <span className="tx-desc">{tx.description}</span>}
               </div>
               <time>{tx.date}</time>
@@ -103,7 +105,7 @@ export function TransactionList({ transactions, onChanged }: Props) {
                 className="btn-delete"
                 onClick={() => handleDelete(tx.id)}
                 disabled={deletingId === tx.id}
-                aria-label={`Delete transaction ${tx.id}`}
+                aria-label={`${t("deleteTransaction")} ${tx.id}`}
               >
                 ×
               </button>

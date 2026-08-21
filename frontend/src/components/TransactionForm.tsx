@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useI18n } from "../i18n";
 import type { TransactionInput, TransactionType } from "../types";
 
 interface Props {
@@ -17,6 +18,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export function TransactionForm({ onCreated }: Props) {
+  const { t, categoryLabel } = useI18n();
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
@@ -42,7 +44,7 @@ export function TransactionForm({ onCreated }: Props) {
     setError(null);
     const value = parseFloat(amount);
     if (!value || value <= 0) {
-      setError("Enter a valid amount");
+      setError(t("invalidAmount"));
       return;
     }
     setSubmitting(true);
@@ -59,7 +61,7 @@ export function TransactionForm({ onCreated }: Props) {
       setDescription("");
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -67,7 +69,7 @@ export function TransactionForm({ onCreated }: Props) {
 
   return (
     <form className="card form" onSubmit={handleSubmit}>
-      <h2>Add transaction</h2>
+      <h2>{t("addTransaction")}</h2>
 
       <div className="type-toggle" role="tablist">
         <button
@@ -75,19 +77,19 @@ export function TransactionForm({ onCreated }: Props) {
           className={type === "expense" ? "active expense" : ""}
           onClick={() => setType("expense")}
         >
-          Expense
+          {t("expense")}
         </button>
         <button
           type="button"
           className={type === "income" ? "active income" : ""}
           onClick={() => setType("income")}
         >
-          Income
+          {t("income")}
         </button>
       </div>
 
       <label>
-        Amount
+        {t("amount")}
         <input
           type="number"
           step="0.01"
@@ -100,18 +102,18 @@ export function TransactionForm({ onCreated }: Props) {
       </label>
 
       <label>
-        Category
+        {t("category")}
         <select value={category} onChange={(e) => setCategory(e.target.value)}>
           {categories.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {categoryLabel(c)}
             </option>
           ))}
         </select>
       </label>
 
       <label>
-        Date
+        {t("date")}
         <input
           type="date"
           value={date}
@@ -121,10 +123,10 @@ export function TransactionForm({ onCreated }: Props) {
       </label>
 
       <label>
-        Description
+        {t("description")}
         <input
           type="text"
-          placeholder="Optional note"
+          placeholder={t("optionalNote")}
           maxLength={255}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -134,7 +136,7 @@ export function TransactionForm({ onCreated }: Props) {
       {error && <p className="form-error">{error}</p>}
 
       <button type="submit" className="btn-primary" disabled={submitting}>
-        {submitting ? "Saving..." : "Add"}
+        {submitting ? t("saving") : t("add")}
       </button>
     </form>
   );
