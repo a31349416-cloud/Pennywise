@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
 import type { Transaction, TransactionFilters } from "../types";
@@ -19,6 +19,8 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api
@@ -34,6 +36,25 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
       onChanged();
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function handleExport() {
+    window.open(api.exportCsvUrl(), "_blank");
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportMsg(null);
+    try {
+      const result = await api.importCsv(file);
+      setImportMsg(`${t("importedResult")}: ${result.imported}, ${t("skippedResult")}: ${result.skipped}`);
+      onChanged();
+    } catch (err) {
+      setImportMsg(err instanceof Error ? err.message : t("saveFailed"));
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -86,8 +107,29 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
               {t("reset")}
             </button>
           )}
+
+          <span className="toolbar-sep" />
+
+          <button className="btn-ghost" onClick={handleExport}>
+            ⭳ {t("exportCsv")}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleImportFile}
+            style={{ display: "none" }}
+          />
+          <button
+            className="btn-ghost"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            ⭱ {t("importCsv")}
+          </button>
         </div>
       </div>
+
+      {importMsg && <p className="import-msg">{importMsg}</p>}
 
       {transactions.length === 0 ? (
         <p className="empty">{t("noTransactions")}</p>

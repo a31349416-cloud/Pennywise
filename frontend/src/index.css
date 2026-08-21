@@ -614,6 +614,19 @@ select:focus {
   font-size: 0.85rem;
 }
 
+.toolbar-sep {
+  width: 1px;
+  background: var(--card-border);
+  align-self: stretch;
+  margin: 2px 4px;
+}
+
+.import-msg {
+  color: var(--accent);
+  font-size: 0.85rem;
+  margin: 8px 0;
+}
+
 .empty {
   color: var(--text-dim);
   text-align: center;
