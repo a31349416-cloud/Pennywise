@@ -9,7 +9,9 @@ export function RateBar() {
     baseCurrency,
     setBaseCurrency,
     rate,
-    setRate,
+    rateSource,
+    refreshAutoRate,
+    setManualRate,
     currencyName,
   } = useCurrency();
 
@@ -21,14 +23,23 @@ export function RateBar() {
 
   if (currency === baseCurrency) return null;
 
-  function commit() {
+  function commitManual() {
     const value = parseFloat(draft.replace(",", "."));
     if (Number.isFinite(value) && value > 0) {
-      setRate(value);
+      setManualRate(value);
     } else {
       setDraft(String(rate));
     }
   }
+
+  const badge =
+    rateSource === "auto"
+      ? { cls: "auto", text: `✓ ${t("autoRate")}` }
+      : rateSource === "loading"
+        ? { cls: "loading", text: t("rateLoading") }
+        : rateSource === "offline"
+          ? { cls: "offline", text: t("offlineHint") }
+          : null;
 
   return (
     <div className="rate-bar card">
@@ -59,12 +70,32 @@ export function RateBar() {
           placeholder={t("ratePlaceholder")}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => e.key === "Enter" && commit()}
+          onBlur={commitManual}
+          onKeyDown={(e) => e.key === "Enter" && commitManual()}
         />
       </label>
 
-      <span className="rate-hint">{t("rateSaved")}</span>
+      <button type="button" className="btn-ghost" onClick={commitManual}>
+        {t("manualRate")}
+      </button>
+
+      {badge && <span className={`rate-badge ${badge.cls}`}>{badge.text}</span>}
+
+      {(rateSource === "manual" || rateSource === "offline") && (
+        <button
+          type="button"
+          className="btn-ghost"
+          onClick={() => {
+            refreshAutoRate();
+          }}
+        >
+          ⟳ {t("useAuto")}
+        </button>
+      )}
+
+      {rateSource === "manual" && (
+        <span className="rate-hint">{t("manualPinned")}</span>
+      )}
     </div>
   );
 }

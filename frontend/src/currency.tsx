@@ -43,6 +43,9 @@ export const CURRENCIES: string[] = [
 ];
 
 const STORAGE_KEY = "pennywise-currency";
+const BASE_KEY = "pennywise-base";
+
+export type RateSource = "loading" | "auto" | "manual" | "offline";
 
 function detectCurrency(): string {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -51,15 +54,10 @@ function detectCurrency(): string {
   const region = locale.split("-")[1]?.toUpperCase();
   if (region) {
     try {
-      const display = new Intl.DisplayNames([locale], { type: "currency" });
-      for (const code of POPULAR) {
-        void display.of(code);
-      }
       const guess = new Intl.NumberFormat(locale, {
         style: "currency",
         currencyDisplay: "code",
-      })
-        .resolvedOptions().currency;
+      }).resolvedOptions().currency;
       if (guess && CURRENCIES.includes(guess)) return guess;
     } catch {
       /* fall through */
@@ -72,36 +70,131 @@ function currentLocale(): string {
   return localStorage.getItem("pennywise-lang") === "uk" ? "uk-UA" : "en-US";
 }
 
+function manualKey(display: string): string {
+  return `pennywise-rate-${display}`;
+}
+
+function cacheKey(display: string): string {
+  return `pennywise-rate-cache-${display}`;
+}
+
+function manualPinKey(display: string): string {
+  return `pennywise-rate-manual-${display}`;
+}
+
+/** Free no-key endpoints, tried in order. */
+async function fetchAutoRate(base: string, target: string): Promise<number> {
+  const res = await fetch(
+    `https://open.er-api.com/v6/latest/${base}`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) throw new Error("er-api failed");
+  const data = await res.json();
+  const rate = data?.rates?.[target];
+  if (typeof rate !== "number" || rate <= 0) throw new Error("no rate");
+  return rate;
+}
+
+async function fetchFallbackRate(
+  base: string,
+  target: string,
+): Promise<number> {
+  const res = await fetch(
+    `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${base.toLowerCase()}.json`,
+    { signal: AbortSignal.timeout(8000) },
+  );
+  if (!res.ok) throw new Error("cdn failed");
+  const data = await res.json();
+  const rate = data?.[base.toLowerCase()]?.[target.toLowerCase()];
+  if (typeof rate !== "number" || rate <= 0) throw new Error("no rate");
+  return rate;
+}
+
 interface CurrencyContextValue {
   currency: string;
   setCurrency: (code: string) => void;
   baseCurrency: string;
   setBaseCurrency: (code: string) => void;
   rate: number;
-  setRate: (value: number) => void;
+  rateSource: RateSource;
+  refreshAutoRate: () => void;
+  setManualRate: (value: number) => void;
   formatMoney: (amount: number) => string;
   currencyName: (code: string) => string;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
-function rateKey(display: string): string {
-  return `pennywise-rate-${display}`;
-}
-
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState<string>(detectCurrency);
   const [baseCurrency, setBaseState] = useState<string>(() => {
-    const saved = localStorage.getItem("pennywise-base");
+    const saved = localStorage.getItem(BASE_KEY);
     if (saved && CURRENCIES.includes(saved)) return saved;
     return "USD";
   });
   const [rate, setRateState] = useState<number>(1);
+  const [rateSource, setRateSource] = useState<RateSource>("loading");
+  const [fetchTick, setFetchTick] = useState(0);
 
+  // Load initial rate for the current display currency.
   useEffect(() => {
-    const saved = parseFloat(localStorage.getItem(rateKey(currency)) ?? "");
-    setRateState(Number.isFinite(saved) && saved > 0 ? saved : 1);
-  }, [currency]);
+    if (currency === baseCurrency) {
+      setRateState(1);
+      setRateSource("manual");
+      return;
+    }
+    const pinned = localStorage.getItem(manualPinKey(currency)) === "1";
+    const cachedRaw = localStorage.getItem(cacheKey(currency));
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        if (typeof cached.rate === "number" && cached.rate > 0) {
+          setRateState(cached.rate);
+          setRateSource("auto");
+        }
+      } catch {
+        /* ignore */
+      }
+    } else {
+      const manual = parseFloat(localStorage.getItem(manualKey(currency)) ?? "");
+      if (Number.isFinite(manual) && manual > 0) {
+        setRateState(manual);
+        setRateSource(pinned ? "manual" : "loading");
+      }
+    }
+
+    if (pinned) return;
+
+    let cancelled = false;
+    setRateSource("loading");
+    (async () => {
+      let fetched: number | null = null;
+      try {
+        fetched = await fetchAutoRate(baseCurrency, currency);
+      } catch {
+        try {
+          fetched = await fetchFallbackRate(baseCurrency, currency);
+        } catch {
+          fetched = null;
+        }
+      }
+      if (cancelled) return;
+      if (fetched) {
+        setRateState(fetched);
+        setRateSource("auto");
+        localStorage.setItem(
+          cacheKey(currency),
+          JSON.stringify({ rate: fetched, date: new Date().toISOString() }),
+        );
+      } else {
+        const cachedRaw2 = localStorage.getItem(cacheKey(currency));
+        setRateSource(cachedRaw2 ? "auto" : "offline");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currency, baseCurrency, fetchTick]);
 
   useEffect(() => {
     document.documentElement.dataset.currency = currency;
@@ -114,16 +207,23 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   const setBaseCurrency = useCallback((code: string) => {
     setBaseState(code);
-    localStorage.setItem("pennywise-base", code);
+    localStorage.setItem(BASE_KEY, code);
   }, []);
 
-  const setRate = useCallback(
+  const setManualRate = useCallback(
     (value: number) => {
       setRateState(value);
-      localStorage.setItem(rateKey(currency), String(value));
+      setRateSource("manual");
+      localStorage.setItem(manualKey(currency), String(value));
+      localStorage.setItem(manualPinKey(currency), "1");
     },
     [currency],
   );
+
+  const refreshAutoRate = useCallback(() => {
+    localStorage.removeItem(manualPinKey(currency));
+    setFetchTick((n) => n + 1);
+  }, [currency]);
 
   const formatMoney = useCallback(
     (amount: number) =>
@@ -134,20 +234,17 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     [currency, rate],
   );
 
-  const currencyName = useCallback(
-    (code: string) => {
-      try {
-        return (
-          new Intl.DisplayNames([currentLocale()], { type: "currency" }).of(
-            code,
-          ) ?? code
-        );
-      } catch {
-        return code;
-      }
-    },
-    [],
-  );
+  const currencyName = useCallback((code: string) => {
+    try {
+      return (
+        new Intl.DisplayNames([currentLocale()], { type: "currency" }).of(
+          code,
+        ) ?? code
+      );
+    } catch {
+      return code;
+    }
+  }, []);
 
   return (
     <CurrencyContext.Provider
@@ -157,7 +254,9 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         baseCurrency,
         setBaseCurrency,
         rate,
-        setRate,
+        rateSource,
+        refreshAutoRate,
+        setManualRate,
         formatMoney,
         currencyName,
       }}
