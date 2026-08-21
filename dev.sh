@@ -28,16 +28,21 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Starting backend on http://localhost:8000"
-(cd "$ROOT_DIR/backend" && exec .venv/bin/uvicorn app.main:app --reload) &
+(cd "$ROOT_DIR/backend" && exec .venv/bin/uvicorn app.main:app --host 0.0.0.0 --reload) &
 BACKEND_PID=$!
 
 echo "==> Starting frontend on http://localhost:5173"
 (cd "$ROOT_DIR/frontend" && exec npm run dev) &
 FRONTEND_PID=$!
 
+LAN_IP="$(ip -4 addr show 2>/dev/null | grep -oP 'inet \d[\d.]+' | grep -v '127.0.0.1' | awk '{print $2}' | head -1)"
+
 echo
 echo "Pennywise is running:"
-echo "  App:      http://localhost:5173"
-echo "  API docs: http://localhost:8000/docs"
+echo "  App (this device):   http://localhost:5173"
+if [ -n "${LAN_IP:-}" ]; then
+  echo "  App (other devices): http://$LAN_IP:5173"
+fi
+echo "  API docs:            http://localhost:8000/docs"
 echo
 wait
