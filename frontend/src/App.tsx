@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
+import { Budgets } from "./components/Budgets";
 import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthlyChart } from "./components/MonthlyChart";
@@ -8,6 +9,7 @@ import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
 import { useI18n } from "./i18n";
 import type {
+  Budget,
   CategoryStat,
   MonthlyStat,
   Summary,
@@ -20,21 +22,24 @@ export default function App() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [monthly, setMonthly] = useState<MonthlyStat[]>([]);
   const [categories, setCategories] = useState<CategoryStat[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [txs, sum, mon, cats] = await Promise.all([
+      const [txs, sum, mon, cats, buds] = await Promise.all([
         api.listTransactions(),
         api.summary(),
         api.monthly(6),
         api.byCategory("expense"),
+        api.listBudgets(),
       ]);
       setTransactions(txs);
       setSummary(sum);
       setMonthly(mon);
       setCategories(cats);
+      setBudgets(buds);
       setError(null);
     } catch (err) {
       setError(
@@ -76,6 +81,7 @@ export default function App() {
             <MonthlyChart data={monthly} />
             <DonutChart data={categories} />
           </div>
+          <Budgets budgets={budgets} onChanged={refresh} />
           <TransactionList
             transactions={transactions}
             onChanged={refresh}

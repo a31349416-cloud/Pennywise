@@ -44,6 +44,13 @@ export interface MonthlyStat {
   expense: number;
 }
 
+export interface Budget {
+  id: number;
+  category: string;
+  monthly_limit: number;
+  spent: number;
+}
+
 export interface TransactionFilters {
   type?: TransactionType | "";
   category?: string;

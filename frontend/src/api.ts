@@ -1,4 +1,5 @@
 import type {
+  Budget,
   CategoryStat,
   MonthlyStat,
   Summary,
@@ -95,5 +96,45 @@ export const api = {
 
   monthly(months = 6): Promise<MonthlyStat[]> {
     return request(`/api/statistics/monthly?months=${months}`);
+  },
+
+  listBudgets(): Promise<Budget[]> {
+    return request("/api/budgets");
+  },
+
+  createBudget(category: string, monthlyLimit: number): Promise<Budget> {
+    return request("/api/budgets", {
+      method: "POST",
+      body: JSON.stringify({ category, monthly_limit: monthlyLimit }),
+    });
+  },
+
+  updateBudget(id: number, monthlyLimit: number): Promise<Budget> {
+    return request(`/api/budgets/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ monthly_limit: monthlyLimit }),
+    });
+  },
+
+  deleteBudget(id: number): Promise<void> {
+    return request(`/api/budgets/${id}`, { method: "DELETE" });
+  },
+
+  exportCsvUrl(): string {
+    return `${BASE_URL}/api/csv/export`;
+  },
+
+  importCsv(file: File): Promise<{ imported: number; skipped: number }> {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE_URL}/api/csv/import`, { method: "POST", body: form }).then(
+      async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.detail ?? `Import failed: ${res.status}`);
+        }
+        return res.json();
+      },
+    );
   },
 };
