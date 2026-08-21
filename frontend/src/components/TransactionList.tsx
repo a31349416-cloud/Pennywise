@@ -6,11 +6,12 @@ import type { Transaction, TransactionFilters } from "../types";
 
 interface Props {
   transactions: Transaction[];
+  monthRange: { key: string; from: string; to: string };
   onChanged: () => void;
   onEdit: (tx: Transaction) => void;
 }
 
-export function TransactionList({ transactions, onChanged, onEdit }: Props) {
+export function TransactionList({ transactions, monthRange, onChanged, onEdit }: Props) {
   const { lang, t, categoryLabel } = useI18n();
   const { formatMoney } = useCurrency();
 
@@ -101,9 +102,22 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
   }
 
   const hasFilters = useMemo(
-    () => Boolean(filters.type || filters.category || filters.date_from || filters.date_to),
+    () =>
+      Boolean(
+        filters.type || filters.category || filters.date_from || filters.date_to,
+      ),
     [filters],
   );
+
+  const visible = useMemo(() => {
+    const useMonth = !filters.date_from && !filters.date_to;
+    return transactions.filter((tx) => {
+      if (useMonth && (tx.date < monthRange.from || tx.date > monthRange.to)) {
+        return false;
+      }
+      return true;
+    });
+  }, [transactions, filters, monthRange]);
 
   return (
     <section className="card list">
@@ -182,11 +196,11 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
         </div>
       )}
 
-      {transactions.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="empty">{t("noTransactions")}</p>
       ) : (
         <ul>
-          {transactions.map((tx) => (
+          {visible.map((tx) => (
             <li key={tx.id} className={`tx ${tx.type}`}>
               <div className="tx-icon">{tx.type === "income" ? "↓" : "↑"}</div>
               <div className="tx-info">

@@ -362,6 +362,43 @@ h2 {
 
 /* ---------- Toast ---------- */
 
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 10px;
+}
+
+.month-nav button {
+  border: 1px solid var(--card-border);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  width: 36px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.month-nav button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.month-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.month-label {
+  min-width: 170px;
+  text-align: center;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -713,6 +750,14 @@ select:focus {
 
 .bar.income { background: linear-gradient(180deg, var(--accent), #10b981); }
 .bar.expense { background: linear-gradient(180deg, var(--violet), #8b5cf6); }
+
+.bar-group.selected .bar {
+  filter: brightness(1.2) saturate(1.15);
+}
+
+.bar-group:not(.selected) .bar-pair {
+  opacity: 0.45;
+}
 
 .bar-label {
   margin-top: 8px;

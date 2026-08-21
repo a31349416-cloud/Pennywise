@@ -4,9 +4,10 @@ import type { MonthlyStat } from "../types";
 
 interface Props {
   data: MonthlyStat[];
+  selected?: string;
 }
 
-export function MonthlyChart({ data }: Props) {
+export function MonthlyChart({ data, selected }: Props) {
   const { t, monthLabel } = useI18n();
   const { formatMoney } = useCurrency();
 
@@ -30,7 +31,11 @@ export function MonthlyChart({ data }: Props) {
       </div>
       <div className="bars">
         {data.map((d) => (
-          <div key={d.month} className="bar-group" title={`${monthLabel(d.month)}: +${formatMoney(d.income)} / −${formatMoney(d.expense)}`}>
+          <div
+            key={d.month}
+            className={`bar-group${d.month === selected ? " selected" : ""}`}
+            title={`${monthLabel(d.month)}: +${formatMoney(d.income)} / −${formatMoney(d.expense)}`}
+          >
             <div className="bar-pair">
               <div
                 className="bar income"

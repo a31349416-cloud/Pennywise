@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { Budgets } from "./components/Budgets";
 import { CurrencySelect } from "./components/CurrencySelect";
 import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
+import { MonthNav } from "./components/MonthNav";
 import { MonthlyChart } from "./components/MonthlyChart";
 import { RateBar } from "./components/RateBar";
 import { SummaryCards } from "./components/SummaryCards";
@@ -20,6 +21,27 @@ import type {
   Transaction,
 } from "./types";
 
+function currentMonthKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export interface MonthRange {
+  key: string;
+  from: string;
+  to: string;
+}
+
+function monthRangeOf(key: string): MonthRange {
+  const [y, m] = key.split("-").map(Number);
+  const last = new Date(y, m, 0).getDate();
+  return {
+    key,
+    from: `${key}-01`,
+    to: `${key}-${String(last).padStart(2, "0")}`,
+  };
+}
+
 export default function App() {
   const { t } = useI18n();
   const [theme, toggleTheme] = useTheme();
@@ -30,14 +52,17 @@ export default function App() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [monthKey, setMonthKey] = useState(currentMonthKey);
+
+  const range = useMemo(() => monthRangeOf(monthKey), [monthKey]);
 
   const refresh = useCallback(async () => {
     try {
       const [txs, sum, mon, cats, buds] = await Promise.all([
         api.listTransactions(),
         api.summary(),
-        api.monthly(6),
-        api.byCategory("expense"),
+        api.monthly(12),
+        api.byCategory("expense", range.from, range.to),
         api.listBudgets(),
       ]);
       setTransactions(txs);
@@ -51,7 +76,7 @@ export default function App() {
         err instanceof Error ? `${err.message}. ${t("backendError")}` : t("backendError"),
       );
     }
-  }, [t]);
+  }, [t, range]);
 
   useEffect(() => {
     refresh();
@@ -87,14 +112,16 @@ export default function App() {
         </aside>
 
         <div className="content">
+          <MonthNav monthKey={monthKey} onChange={setMonthKey} />
           {summary && <SummaryCards summary={summary} />}
           <div className="dashboard">
-            <MonthlyChart data={monthly} />
+            <MonthlyChart data={monthly} selected={monthKey} />
             <DonutChart data={categories} />
           </div>
           <Budgets budgets={budgets} onChanged={refresh} />
           <TransactionList
             transactions={transactions}
+            monthRange={range}
             onChanged={refresh}
             onEdit={(tx) => {
               setEditingTx(tx);
