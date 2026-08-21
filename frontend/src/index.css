@@ -84,11 +84,19 @@ h2 {
 .app {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 24px 20px 64px;
 }
 
 .app-header {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .header-row {
@@ -129,7 +137,7 @@ h2 {
 }
 
 .app-header h1 {
-  font-size: 1.9rem;
+  font-size: 1.7rem;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -366,6 +374,19 @@ h2 {
   border-radius: var(--radius);
   padding: 20px;
   backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  animation: rise 0.35s ease both;
+}
+
+.content > *:nth-child(2) { animation-delay: 0.05s; }
+.content > *:nth-child(3) { animation-delay: 0.1s; }
+.content > *:nth-child(4) { animation-delay: 0.15s; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 /* ---------- Summary cards ---------- */
@@ -386,6 +407,27 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+  overflow: hidden;
+  padding-left: 24px;
+}
+
+.stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+}
+
+.stat.balance::before { background: linear-gradient(180deg, var(--violet), var(--accent)); }
+.stat.income::before { background: var(--accent); }
+.stat.expense::before { background: var(--danger); }
+
+.stat:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--text-dim) 35%, transparent);
 }
 
 .stat-label {
