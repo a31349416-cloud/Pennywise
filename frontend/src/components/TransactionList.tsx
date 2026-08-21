@@ -33,8 +33,44 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
     });
   }
-  const [filters, setFilters] = useState<TransactionFilters>({});
-  const [search, setSearch] = useState("");
+  const storedFilters = useMemo(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem("pennywise-filters") ?? "{}");
+      return { filters: raw.filters ?? {}, search: typeof raw.search === "string" ? raw.search : "" };
+    } catch {
+      return { filters: {}, search: "" };
+    }
+  }, []);
+
+  const [filters, setFilters] = useState<TransactionFilters>(storedFilters.filters);
+  const [search, setSearch] = useState(storedFilters.search);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem("pennywise-filters", JSON.stringify({ filters, search }));
+  }, [filters, search]);
+
+  // "/" focuses search, Escape clears it.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null;
+      const typing = el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+      if (typing) {
+        if (e.key === "Escape" && el === searchRef.current) {
+          setSearch("");
+          searchRef.current?.blur();
+        }
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const [visibleDays, setVisibleDays] = useState(7);
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -169,9 +205,11 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
         <h2>{t("transactions")}</h2>
         <div className="filters">
           <input
+            ref={searchRef}
             type="search"
             className="search-input"
             placeholder={t("searchPlaceholder")}
+            title={t("hotkeyHint")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

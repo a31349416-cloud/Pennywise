@@ -62,7 +62,40 @@ export default function App() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [monthKey, setMonthKey] = useState(currentMonthKey);
+  const [monthKey, setMonthKey] = useState<string>(() => {
+    const saved = localStorage.getItem("pennywise-month");
+    return saved && /^\d{4}-\d{2}$/.test(saved) ? saved : currentMonthKey();
+  });
+
+  useEffect(() => {
+    localStorage.setItem("pennywise-month", monthKey);
+  }, [monthKey]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null;
+      if (
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
+      ) {
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        setMonthKey((k) => shiftMonthKey(k, -1));
+      } else if (e.key === "ArrowRight") {
+        setMonthKey((k) => {
+          const next = shiftMonthKey(k, 1);
+          return next > currentMonthKey() ? k : next;
+        });
+      } else if (e.key.toLowerCase() === "t") {
+        setMonthKey(currentMonthKey());
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const range = useMemo(() => monthRangeOf(monthKey), [monthKey]);
   const prevRange = useMemo(
