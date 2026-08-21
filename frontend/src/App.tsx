@@ -5,9 +5,11 @@ import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthlyChart } from "./components/MonthlyChart";
 import { SummaryCards } from "./components/SummaryCards";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
 import { useI18n } from "./i18n";
+import { useTheme } from "./useTheme";
 import type {
   Budget,
   CategoryStat,
@@ -18,6 +20,7 @@ import type {
 
 export default function App() {
   const { t } = useI18n();
+  const [theme, toggleTheme] = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [monthly, setMonthly] = useState<MonthlyStat[]>([]);
@@ -59,7 +62,10 @@ export default function App() {
           <h1>
             <span className="logo">¢</span> Pennywise
           </h1>
-          <LanguageToggle />
+          <div className="header-controls">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+            <LanguageToggle />
+          </div>
         </div>
         <p className="tagline">{t("tagline")}</p>
       </header>
