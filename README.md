@@ -16,6 +16,26 @@ frontend/  — React SPA (дашборд, список транзакцій, ф�
 
 ## Запуск
 
+### Автономний режим (рекомендовано)
+
+Один сервіс на порту 8000: бекенд + зібраний фронтенд разом. Автозапуск при вході в систему, авторестарт при падінні.
+
+```bash
+./install-service.sh
+```
+
+- Додаток: http://localhost:8000
+- API docs: http://localhost:8000/docs
+
+Керування:
+
+```bash
+systemctl --user status pennywise          # статус
+systemctl --user restart pennywise         # перезапуск
+journalctl --user -u pennywise -f          # логи
+systemctl --user disable --now pennywise   # вимкнути автозапуск
+```
+
 ### Docker (будь-яка ОС)
 
 Потрібен лише [Docker](https://docs.docker.com/get-docker/):
@@ -31,8 +51,9 @@ docker compose up --build
 
 ### Доступ з інших пристроїв
 
-**Локальна мережа (Wi-Fi/LAN).** І бекенд, і фронтенд слухають на всіх інтерфейсах. Дізнайся IP комп'ютера (`ip addr` / `ipconfig`) і відкрий на іншому пристрої:
+**Локальна мережа (Wi-Fi/LAN).** Сервер слухає на всіх інтерфейсах. Дізнайся IP комп'ютера (`ip addr` / `ipconfig`) і відкрий на іншому пристрої:
 
+- автономний режим: `http://<IP>:8000`
 - розробка: `http://<IP>:5173`
 - Docker: `http://<IP>:8080`
 
