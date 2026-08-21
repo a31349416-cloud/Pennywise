@@ -16,6 +16,21 @@ frontend/  — React SPA (дашборд, список транзакцій, ф�
 
 ## Запуск
 
+### Docker (будь-яка ОС)
+
+Потрібен лише [Docker](https://docs.docker.com/get-docker/):
+
+```bash
+docker compose up --build
+```
+
+- Додаток: http://localhost:8080
+- API docs: http://localhost:8000/docs
+
+Дані зберігаються в Docker-томі `db-data`.
+
+### Локально (розробка)
+
 Одна команда — запускає бекенд і фронтенд разом (за потреби сама встановлює залежності):
 
 ```bash
