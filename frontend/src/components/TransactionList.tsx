@@ -27,6 +27,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
     );
   }
   const [filters, setFilters] = useState<TransactionFilters>({});
+  const [search, setSearch] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
@@ -104,26 +105,43 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
   const hasFilters = useMemo(
     () =>
       Boolean(
-        filters.type || filters.category || filters.date_from || filters.date_to,
+        filters.type || filters.category || filters.date_from || filters.date_to || search.trim(),
       ),
-    [filters],
+    [filters, search],
   );
 
   const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
     const useMonth = !filters.date_from && !filters.date_to;
     return transactions.filter((tx) => {
       if (useMonth && (tx.date < monthRange.from || tx.date > monthRange.to)) {
         return false;
       }
+      if (
+        q &&
+        !`${tx.description ?? ""} ${categoryLabel(tx.category)}`
+          .toLowerCase()
+          .includes(q)
+      ) {
+        return false;
+      }
       return true;
     });
-  }, [transactions, filters, monthRange]);
+  }, [transactions, search, filters, monthRange, categoryLabel]);
 
   return (
     <section className="card list">
       <div className="list-header">
         <h2>{t("transactions")}</h2>
         <div className="filters">
+          <input
+            type="search"
+            className="search-input"
+            placeholder={t("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
           <select
             value={filters.type ?? ""}
             onChange={(e) =>
@@ -159,7 +177,13 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
           />
 
           {hasFilters && (
-            <button className="btn-ghost" onClick={() => setFilters({})}>
+            <button
+              className="btn-ghost"
+              onClick={() => {
+                setFilters({});
+                setSearch("");
+              }}
+            >
               {t("reset")}
             </button>
           )}

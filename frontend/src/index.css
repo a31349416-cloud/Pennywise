@@ -973,6 +973,11 @@ select:focus {
   font-size: 0.85rem;
 }
 
+.search-input {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
 .toolbar-sep {
   width: 1px;
   background: var(--card-border);
