@@ -20,11 +20,18 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
     return `${sign}${formatMoney(tx.amount)}`;
   }
 
-  function formatDate(iso: string): string {
-    return new Date(`${iso}T00:00:00`).toLocaleDateString(
-      lang === "uk" ? "uk-UA" : "en-US",
-      { day: "numeric", month: "short", year: "numeric" },
-    );
+  function formatDayLabel(iso: string): string {
+    const d = new Date(`${iso}T00:00:00`);
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (iso === todayIso) return t("today");
+    if (iso === yesterday) return t("yesterday");
+    return d.toLocaleDateString(lang === "uk" ? "uk-UA" : "en-US", {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
+    });
   }
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [search, setSearch] = useState("");
@@ -129,6 +136,27 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
     });
   }, [transactions, search, filters, monthRange, categoryLabel]);
 
+  const groups = useMemo(() => {
+    const sorted = [...visible].sort(
+      (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
+    );
+    const out: { date: string; items: Transaction[]; net: number }[] = [];
+    for (const tx of sorted) {
+      const last = out[out.length - 1];
+      if (last && last.date === tx.date) {
+        last.items.push(tx);
+        last.net += tx.type === "income" ? tx.amount : -tx.amount;
+      } else {
+        out.push({
+          date: tx.date,
+          items: [tx],
+          net: tx.type === "income" ? tx.amount : -tx.amount,
+        });
+      }
+    }
+    return out;
+  }, [visible]);
+
   return (
     <section className="card list">
       <div className="list-header">
@@ -220,38 +248,49 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
         </div>
       )}
 
-      {visible.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="empty">{t("noTransactions")}</p>
       ) : (
-        <ul>
-          {visible.map((tx) => (
-            <li key={tx.id} className={`tx ${tx.type}`}>
-              <div className="tx-icon">{tx.type === "income" ? "↓" : "↑"}</div>
-              <div className="tx-info">
-                <span className="tx-category">{categoryLabel(tx.category)}</span>
-                {tx.description && <span className="tx-desc">{tx.description}</span>}
-              </div>
-              <time>{formatDate(tx.date)}</time>
-              <span className="tx-amount">{formatAmount(tx)}</span>
-              <button
-                className="btn-icon"
-                onClick={() => onEdit(tx)}
-                aria-label={`${t("edit")} ${tx.id}`}
-                title={t("edit")}
-              >
-                ✎
-              </button>
-              <button
-                className="btn-delete"
-                onClick={() => handleDelete(tx.id)}
-                disabled={deletingId === tx.id}
-                aria-label={`${t("deleteTransaction")} ${tx.id}`}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
+        groups.map((g) => (
+          <div key={g.date} className="day-group">
+            <div className="day-header">
+              <span>{formatDayLabel(g.date)}</span>
+              <span className={g.net >= 0 ? "day-net pos" : "day-net neg"}>
+                {g.net >= 0 ? "+" : "−"}
+                {formatMoney(Math.abs(g.net))}
+              </span>
+            </div>
+            <ul>
+              {g.items.map((tx) => (
+                <li key={tx.id} className={`tx ${tx.type}`}>
+                  <div className="tx-icon">{tx.type === "income" ? "↓" : "↑"}</div>
+                  <div className="tx-info">
+                    <span className="tx-category">{categoryLabel(tx.category)}</span>
+                    {tx.description && <span className="tx-desc">{tx.description}</span>}
+                  </div>
+                  <time className="visually-hidden">{g.date}</time>
+                  <span className="tx-amount">{formatAmount(tx)}</span>
+                  <button
+                    className="btn-icon"
+                    onClick={() => onEdit(tx)}
+                    aria-label={`${t("edit")} ${tx.id}`}
+                    title={t("edit")}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="btn-delete"
+                    onClick={() => handleDelete(tx.id)}
+                    disabled={deletingId === tx.id}
+                    aria-label={`${t("deleteTransaction")} ${tx.id}`}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
       )}
     </section>
   );

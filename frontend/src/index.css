@@ -1108,9 +1108,50 @@ select:focus {
   white-space: nowrap;
 }
 
+/* ---------- Day groups ---------- */
+
+.day-group {
+  margin-bottom: 6px;
+}
+
+.day-header {
+  position: sticky;
+  top: 64px;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.day-net {
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-net.pos { color: var(--accent); }
+.day-net.neg { color: var(--danger); }
+
 .tx time {
   color: var(--text-dim);
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
 
@@ -1177,11 +1218,6 @@ select:focus {
   .tx {
     flex-wrap: wrap;
     row-gap: 4px;
-  }
-
-  .tx time {
-    order: 5;
-    margin-left: 50px;
   }
 
   .filters select,
