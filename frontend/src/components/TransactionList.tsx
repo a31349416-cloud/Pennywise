@@ -15,7 +15,14 @@ function formatAmount(tx: Transaction): string {
 }
 
 export function TransactionList({ transactions, onChanged, onEdit }: Props) {
-  const { t, categoryLabel } = useI18n();
+  const { lang, t, categoryLabel } = useI18n();
+
+  function formatDate(iso: string): string {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(
+      lang === "uk" ? "uk-UA" : "en-US",
+      { day: "numeric", month: "short", year: "numeric" },
+    );
+  }
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -142,7 +149,7 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
                 <span className="tx-category">{categoryLabel(tx.category)}</span>
                 {tx.description && <span className="tx-desc">{tx.description}</span>}
               </div>
-              <time>{tx.date}</time>
+              <time>{formatDate(tx.date)}</time>
               <span className="tx-amount">{formatAmount(tx)}</span>
               <button
                 className="btn-icon"

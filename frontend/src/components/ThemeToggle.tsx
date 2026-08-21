@@ -1,3 +1,4 @@
+import { useI18n } from "../i18n";
 import type { Theme } from "../useTheme";
 
 interface Props {
@@ -6,13 +7,15 @@ interface Props {
 }
 
 export function ThemeToggle({ theme, onToggle }: Props) {
+  const { t } = useI18n();
+
   return (
     <button
       type="button"
       className="theme-toggle"
       onClick={onToggle}
-      aria-label="Toggle theme"
-      title={theme === "dark" ? "Light mode" : "Dark mode"}
+      aria-label={t("toggleTheme")}
+      title={theme === "dark" ? t("lightMode") : t("darkMode")}
     >
       {theme === "dark" ? "☀" : "☾"}
     </button>

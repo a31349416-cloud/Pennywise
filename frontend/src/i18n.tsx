@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { setApiErrorTranslator } from "./api";
+
 export type Lang = "en" | "uk";
 
 const dict = {
@@ -37,6 +39,12 @@ const dict = {
     importCsv: "Import CSV",
     importedResult: "Imported",
     skippedResult: "skipped",
+    language: "Language",
+    toggleTheme: "Toggle theme",
+    lightMode: "Switch to light",
+    darkMode: "Switch to dark",
+    requestFailed: "Request failed",
+    pageTitle: "Pennywise — Finance Tracker",
     transactions: "Transactions",
     allTypes: "All types",
     allCategories: "All categories",
@@ -78,6 +86,12 @@ const dict = {
     importCsv: "Імпорт CSV",
     importedResult: "Імпортовано",
     skippedResult: "пропущено",
+    language: "Мова",
+    toggleTheme: "Змінити тему",
+    lightMode: "Світла тема",
+    darkMode: "Темна тема",
+    requestFailed: "Помилка запиту",
+    pageTitle: "Pennywise — Фінансовий трекер",
     transactions: "Транзакції",
     allTypes: "Усі типи",
     allCategories: "Усі категорії",
@@ -137,6 +151,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = lang;
+    document.title = dict[lang].pageTitle;
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {
@@ -171,3 +186,5 @@ export function useI18n(): I18nContextValue {
   if (!ctx) throw new Error("useI18n must be used within I18nProvider");
   return ctx;
 }
+
+setApiErrorTranslator((key) => dict[detectLang()][key]);

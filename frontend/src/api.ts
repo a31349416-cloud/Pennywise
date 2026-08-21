@@ -17,11 +17,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (res.status === 204) return undefined as T;
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new Error(body?.detail ?? `Request failed: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(await errorMessage(res));
   return res.json();
+}
+
+let translateError: (key: "requestFailed") => string = (k) => k;
+
+export function setApiErrorTranslator(
+  fn: (key: "requestFailed") => string,
+): void {
+  translateError = fn;
+}
+
+async function errorMessage(res: Response): Promise<string> {
+  const body = await res.json().catch(() => null);
+  const detail = body?.detail;
+  if (typeof detail === "string") return detail;
+  return `${translateError("requestFailed")} (${res.status})`;
 }
 
 function toQuery(params: Record<string, string | undefined>): string {

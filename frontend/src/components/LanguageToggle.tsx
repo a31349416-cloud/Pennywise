@@ -6,10 +6,10 @@ const LANGS: { code: Lang; label: string }[] = [
 ];
 
 export function LanguageToggle() {
-  const { lang, setLang } = useI18n();
+  const { lang, setLang, t } = useI18n();
 
   return (
-    <div className="lang-toggle" role="group" aria-label="Language">
+    <div className="lang-toggle" role="group" aria-label={t("language")}>
       {LANGS.map(({ code, label }) => (
         <button
           key={code}
