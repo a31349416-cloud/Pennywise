@@ -44,7 +44,7 @@ export function DonutChart({ data }: Props) {
 
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+  const fractions = data.map((d) => (total > 0 ? d.total / total : 0));
 
   return (
     <section className="card donut">
@@ -52,9 +52,11 @@ export function DonutChart({ data }: Props) {
       <div className="donut-wrap">
         <svg viewBox="0 0 160 160" className="donut-svg" role="img">
           {data.map((d, i) => {
-            const fraction = total > 0 ? d.total / total : 0;
-            const dash = fraction * circumference;
-            const el = (
+            const dash = fractions[i] * circumference;
+            const offset = fractions
+              .slice(0, i)
+              .reduce((sum, f) => sum + f * circumference, 0);
+            return (
               <circle
                 key={d.category}
                 cx="80"
@@ -70,8 +72,6 @@ export function DonutChart({ data }: Props) {
                 <title>{`${categoryLabel(d.category)}: ${formatMoney(d.total)}`}</title>
               </circle>
             );
-            offset += dash;
-            return el;
           })}
           <text x="80" y="76" textAnchor="middle" className="donut-total">
             {centerLabel(total)}

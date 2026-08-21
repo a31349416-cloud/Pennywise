@@ -26,20 +26,22 @@ def summary(
 ):
     base = _period_filter(select(Transaction), date_from, date_to).subquery()
     income = db.scalar(
-        select(func.coalesce(func.sum(base.c.amount), 0.0)).where(
+        select(func.coalesce(func.sum(base.c.amount_cents), 0)).where(
             base.c.type == "income"
         )
     )
     expense = db.scalar(
-        select(func.coalesce(func.sum(base.c.amount), 0.0)).where(
+        select(func.coalesce(func.sum(base.c.amount_cents), 0)).where(
             base.c.type == "expense"
         )
     )
     count = db.scalar(select(func.count()).select_from(base))
+    income = round(int(income or 0) / 100, 2)
+    expense = round(int(expense or 0) / 100, 2)
     return {
-        "income": float(income or 0.0),
-        "expense": float(expense or 0.0),
-        "balance": float(income or 0.0) - float(expense or 0.0),
+        "income": income,
+        "expense": expense,
+        "balance": round(income - expense, 2),
         "count": int(count or 0),
     }
 
@@ -52,16 +54,19 @@ def by_category(
     db: Session = Depends(get_db),
 ):
     stmt = _period_filter(
-        select(Transaction.category, func.sum(Transaction.amount).label("total")).where(
-            Transaction.type == type
-        ),
+        select(
+            Transaction.category,
+            func.sum(Transaction.amount_cents).label("total_cents"),
+        ).where(Transaction.type == type),
         date_from,
         date_to,
     )
     rows = db.execute(
-        stmt.group_by(Transaction.category).order_by(func.sum(Transaction.amount).desc())
+        stmt.group_by(Transaction.category).order_by(func.sum(Transaction.amount_cents).desc())
     ).all()
-    return [{"category": r[0], "total": float(r[1])} for r in rows]
+    return [
+        {"category": r[0], "total": round(int(r[1] or 0) / 100, 2)} for r in rows
+    ]
 
 
 @router.get("/monthly")
@@ -81,14 +86,20 @@ def monthly(
 
     month_expr = func.strftime("%Y-%m", Transaction.date).label("month")
     stmt = (
-        select(month_expr, Transaction.type, func.sum(Transaction.amount).label("total"))
+        select(
+            month_expr,
+            Transaction.type,
+            func.sum(Transaction.amount_cents).label("total_cents"),
+        )
         .where(Transaction.date >= start_date)
         .group_by(month_expr, Transaction.type)
         .order_by(month_expr)
     )
     data: dict[str, dict[str, float]] = {}
-    for month, tx_type, total in db.execute(stmt).all():
-        data.setdefault(month, {"income": 0.0, "expense": 0.0})[tx_type] = float(total)
+    for month, tx_type, total_cents in db.execute(stmt).all():
+        data.setdefault(month, {"income": 0.0, "expense": 0.0})[tx_type] = round(
+            int(total_cents or 0) / 100, 2
+        )
     return [
         {"month": m, "income": v["income"], "expense": v["expense"]}
         for m, v in sorted(data.items())

@@ -11,6 +11,25 @@ interface Props {
   onEdit: (tx: Transaction) => void;
 }
 
+function dayLabel(
+  iso: string,
+  lang: string,
+  t: (key: "today" | "yesterday") => string,
+): string {
+  const d = new Date(`${iso}T00:00:00`);
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  const yesterdayIso = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (iso === todayIso) return t("today");
+  if (iso === yesterdayIso) return t("yesterday");
+  return d.toLocaleDateString(lang === "uk" ? "uk-UA" : "en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+  });
+}
+
 export function TransactionList({ transactions, monthRange, onChanged, onEdit }: Props) {
   const { lang, t, categoryLabel } = useI18n();
   const { formatMoney } = useCurrency();
@@ -18,20 +37,6 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
   function formatAmount(tx: Transaction): string {
     const sign = tx.type === "income" ? "+" : "−";
     return `${sign}${formatMoney(tx.amount)}`;
-  }
-
-  function formatDayLabel(iso: string): string {
-    const d = new Date(`${iso}T00:00:00`);
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    if (iso === todayIso) return t("today");
-    if (iso === yesterday) return t("yesterday");
-    return d.toLocaleDateString(lang === "uk" ? "uk-UA" : "en-US", {
-      weekday: "short",
-      day: "numeric",
-      month: "long",
-      ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
-    });
   }
   const storedFilters = useMemo(() => {
     try {
@@ -164,6 +169,18 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
     const useMonth = !filters.date_from && !filters.date_to;
     return transactions.filter((tx) => {
       if (useMonth && (tx.date < monthRange.from || tx.date > monthRange.to)) {
+        return false;
+      }
+      if (filters.type && tx.type !== filters.type) {
+        return false;
+      }
+      if (filters.category && tx.category !== filters.category) {
+        return false;
+      }
+      if (filters.date_from && tx.date < filters.date_from) {
+        return false;
+      }
+      if (filters.date_to && tx.date > filters.date_to) {
         return false;
       }
       if (
@@ -302,7 +319,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
           {groups.slice(0, visibleDays).map((g) => (
           <div key={g.date} className="day-group">
             <div className="day-header">
-              <span>{formatDayLabel(g.date)}</span>
+              <span>{dayLabel(g.date, lang, t)}</span>
               <span className={g.net >= 0 ? "day-net pos" : "day-net neg"}>
                 {g.net >= 0 ? "+" : "−"}
                 {formatMoney(Math.abs(g.net))}

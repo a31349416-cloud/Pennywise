@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { Transaction, TransactionInput, TransactionType } from "../types";
 
@@ -38,6 +39,7 @@ const QUICK_PRESETS = [
 
 export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
   const { t, categoryLabel } = useI18n();
+  const { baseCurrency } = useCurrency();
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
@@ -170,7 +172,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
       </div>
 
       <label>
-        {t("amount")}
+        {t("amount")} ({baseCurrency})
         <input
           type="number"
           step="0.01"

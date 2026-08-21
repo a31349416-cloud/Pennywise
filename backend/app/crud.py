@@ -1,9 +1,19 @@
+import calendar
 import datetime
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import models, schemas
+
+
+def to_cents(amount: float) -> int:
+    return int(Decimal(str(amount)).quantize(Decimal("0.01")) * 100)
+
+
+def to_major(cents: int | None) -> float:
+    return round((cents or 0) / 100, 2)
 
 
 def list_transactions(
@@ -37,7 +47,13 @@ def get_transaction(db: Session, tx_id: int) -> models.Transaction | None:
 def create_transaction(
     db: Session, data: schemas.TransactionCreate
 ) -> models.Transaction:
-    tx = models.Transaction(**data.model_dump())
+    tx = models.Transaction(
+        type=data.type.value,
+        amount_cents=to_cents(data.amount),
+        category=data.category,
+        description=data.description,
+        date=data.date,
+    )
     db.add(tx)
     db.commit()
     db.refresh(tx)
@@ -47,7 +63,12 @@ def create_transaction(
 def update_transaction(
     db: Session, tx: models.Transaction, data: schemas.TransactionUpdate
 ) -> models.Transaction:
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    if "amount" in updates:
+        tx.amount_cents = to_cents(updates.pop("amount"))
+    if "type" in updates and updates["type"] is not None:
+        updates["type"] = updates["type"].value
+    for field, value in updates.items():
         setattr(tx, field, value)
     db.commit()
     db.refresh(tx)
@@ -87,7 +108,10 @@ def get_budget_by_category(
 
 
 def create_budget(db: Session, data: schemas.BudgetCreate) -> models.Budget:
-    budget = models.Budget(**data.model_dump())
+    budget = models.Budget(
+        category=data.category,
+        monthly_limit_cents=to_cents(data.monthly_limit),
+    )
     db.add(budget)
     db.commit()
     db.refresh(budget)
@@ -97,7 +121,10 @@ def create_budget(db: Session, data: schemas.BudgetCreate) -> models.Budget:
 def update_budget(
     db: Session, budget: models.Budget, data: schemas.BudgetUpdate
 ) -> models.Budget:
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    if "monthly_limit" in updates:
+        budget.monthly_limit_cents = to_cents(updates.pop("monthly_limit"))
+    for field, value in updates.items():
         setattr(budget, field, value)
     db.commit()
     db.refresh(budget)
@@ -110,13 +137,20 @@ def delete_budget(db: Session, budget: models.Budget) -> None:
 
 
 def spent_this_month(
-    db: Session, category: str, month_start: datetime.date
+    db: Session,
+    category: str,
+    month_start: datetime.date,
 ) -> float:
+    last_day = calendar.monthrange(month_start.year, month_start.month)[1]
+    month_end_exclusive = month_start.replace(day=last_day) + datetime.timedelta(
+        days=1
+    )
     total = db.scalar(
-        select(func.coalesce(func.sum(models.Transaction.amount), 0.0)).where(
+        select(func.coalesce(func.sum(models.Transaction.amount_cents), 0)).where(
             models.Transaction.type == "expense",
             models.Transaction.category == category,
             models.Transaction.date >= month_start,
+            models.Transaction.date < month_end_exclusive,
         )
     )
-    return float(total or 0.0)
+    return to_major(total)

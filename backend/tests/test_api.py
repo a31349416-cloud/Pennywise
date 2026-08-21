@@ -132,6 +132,22 @@ def test_budget_lifecycle_and_spent(client):
     )
 
 
+def test_money_rounding_in_cents(client):
+    client.post(
+        "/api/transactions",
+        json={"type": "expense", "amount": 10.1, "category": "Food", "date": "2026-08-01"},
+    )
+    client.post(
+        "/api/transactions",
+        json={"type": "expense", "amount": 20.2, "category": "Food", "date": "2026-08-02"},
+    )
+    summary = client.get("/api/statistics/summary").json()
+    assert summary["expense"] == 30.3
+
+    by_category = client.get("/api/statistics/by-category").json()
+    assert by_category == [{"category": "Food", "total": 30.3}]
+
+
 def test_csv_export_import_roundtrip(client):
     client.post(
         "/api/transactions",

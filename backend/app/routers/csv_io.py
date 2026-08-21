@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
+from ..crud import to_cents
 from ..database import get_db
 
 router = APIRouter(prefix="/api/csv", tags=["csv"])
@@ -28,7 +29,7 @@ def export_csv(db: Session = Depends(get_db)):
             {
                 "id": tx.id,
                 "type": tx.type,
-                "amount": tx.amount,
+                "amount": f"{tx.amount_cents / 100:.2f}",
                 "category": tx.category,
                 "description": tx.description or "",
                 "date": tx.date.isoformat(),
@@ -60,15 +61,17 @@ def import_csv(file: UploadFile, db: Session = Depends(get_db)):
     imported, skipped = 0, 0
     for row in reader:
         try:
+            amount = float(row["amount"])
+            tx_type = row["type"].strip()
+            if tx_type not in ("income", "expense") or amount <= 0:
+                raise ValueError
             tx = models.Transaction(
-                type=row["type"].strip(),
-                amount=float(row["amount"]),
+                type=tx_type,
+                amount_cents=to_cents(amount),
                 category=row["category"].strip(),
                 description=(row.get("description") or "").strip() or None,
                 date=datetime.date.fromisoformat(row["date"].strip()),
             )
-            if tx.type not in ("income", "expense") or tx.amount <= 0:
-                raise ValueError
         except (KeyError, ValueError):
             skipped += 1
             continue

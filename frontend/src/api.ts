@@ -9,7 +9,8 @@ import type {
   TransactionUpdate,
 } from "./types";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL =
+  import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:8000`;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -45,16 +46,32 @@ function toQuery(params: Record<string, string | undefined>): string {
   return s ? `?${s}` : "";
 }
 
+const PAGE_SIZE = 500;
+
+async function listAllTransactions(
+  filters: TransactionFilters,
+): Promise<Transaction[]> {
+  const query = toQuery({
+    type: filters.type || undefined,
+    category: filters.category || undefined,
+    date_from: filters.date_from || undefined,
+    date_to: filters.date_to || undefined,
+  });
+  const all: Transaction[] = [];
+  let skip = 0;
+  for (;;) {
+    const page = await request<Transaction[]>(
+      `/api/transactions${query ? `${query}&` : "?"}skip=${skip}&limit=${PAGE_SIZE}`,
+    );
+    all.push(...page);
+    if (page.length < PAGE_SIZE) return all;
+    skip += PAGE_SIZE;
+  }
+}
+
 export const api = {
   listTransactions(filters: TransactionFilters = {}): Promise<Transaction[]> {
-    return request(
-      `/api/transactions${toQuery({
-        type: filters.type || undefined,
-        category: filters.category || undefined,
-        date_from: filters.date_from || undefined,
-        date_to: filters.date_to || undefined,
-      })}`,
-    );
+    return listAllTransactions(filters);
   },
 
   getTransaction(id: number): Promise<Transaction> {

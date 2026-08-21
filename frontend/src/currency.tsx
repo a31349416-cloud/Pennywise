@@ -220,6 +220,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const setBaseCurrency = useCallback((code: string) => {
     setBaseState(code);
     localStorage.setItem(BASE_KEY, code);
+    // Follow the records currency so newly entered amounts are shown
+    // as-is instead of being converted to a different display currency.
+    setCurrencyState(code);
+    localStorage.setItem(STORAGE_KEY, code);
   }, []);
 
   const setManualRate = useCallback(
