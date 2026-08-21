@@ -20,6 +20,7 @@ export default function App() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [monthly, setMonthly] = useState<MonthlyStat[]>([]);
   const [categories, setCategories] = useState<CategoryStat[]>([]);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -62,7 +63,11 @@ export default function App() {
 
       <main className="layout">
         <aside className="sidebar">
-          <TransactionForm onCreated={refresh} />
+          <TransactionForm
+            onSaved={refresh}
+            editing={editingTx}
+            onCancelEdit={() => setEditingTx(null)}
+          />
         </aside>
 
         <div className="content">
@@ -71,7 +76,14 @@ export default function App() {
             <MonthlyChart data={monthly} />
             <CategoryBreakdown data={categories} />
           </div>
-          <TransactionList transactions={transactions} onChanged={refresh} />
+          <TransactionList
+            transactions={transactions}
+            onChanged={refresh}
+            onEdit={(tx) => {
+              setEditingTx(tx);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         </div>
       </main>
     </div>

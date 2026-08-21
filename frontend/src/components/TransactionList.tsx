@@ -6,6 +6,7 @@ import type { Transaction, TransactionFilters } from "../types";
 interface Props {
   transactions: Transaction[];
   onChanged: () => void;
+  onEdit: (tx: Transaction) => void;
 }
 
 function formatAmount(tx: Transaction): string {
@@ -13,7 +14,7 @@ function formatAmount(tx: Transaction): string {
   return `${sign}$${tx.amount.toFixed(2)}`;
 }
 
-export function TransactionList({ transactions, onChanged }: Props) {
+export function TransactionList({ transactions, onChanged, onEdit }: Props) {
   const { t, categoryLabel } = useI18n();
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [categories, setCategories] = useState<string[]>([]);
@@ -101,6 +102,14 @@ export function TransactionList({ transactions, onChanged }: Props) {
               </div>
               <time>{tx.date}</time>
               <span className="tx-amount">{formatAmount(tx)}</span>
+              <button
+                className="btn-icon"
+                onClick={() => onEdit(tx)}
+                aria-label={`${t("edit")} ${tx.id}`}
+                title={t("edit")}
+              >
+                ✎
+              </button>
               <button
                 className="btn-delete"
                 onClick={() => handleDelete(tx.id)}

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
-import type { TransactionInput, TransactionType } from "../types";
+import type { Transaction, TransactionInput, TransactionType } from "../types";
 
 interface Props {
-  onCreated: () => void;
+  onSaved: () => void;
+  editing: Transaction | null;
+  onCancelEdit: () => void;
 }
 
 const DEFAULT_CATEGORIES = [
@@ -17,8 +19,8 @@ const DEFAULT_CATEGORIES = [
   "Other",
 ];
 
-export function TransactionForm({ onCreated }: Props) {
-  const { t, categoryLabel } = useI18n();
+export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
+  const { t } = useI18n();
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
@@ -39,6 +41,17 @@ export function TransactionForm({ onCreated }: Props) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (editing) {
+      setType(editing.type);
+      setAmount(String(editing.amount));
+      setCategory(editing.category);
+      setDescription(editing.description ?? "");
+      setDate(editing.date);
+      setError(null);
+    }
+  }, [editing]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -49,17 +62,29 @@ export function TransactionForm({ onCreated }: Props) {
     }
     setSubmitting(true);
     try {
-      const data: TransactionInput = {
-        type,
-        amount: value,
-        category,
-        description: description.trim() || null,
-        date,
-      };
-      await api.createTransaction(data);
-      setAmount("");
-      setDescription("");
-      onCreated();
+      if (editing) {
+        const data: TransactionInput = {
+          type,
+          amount: value,
+          category,
+          description: description.trim() || null,
+          date,
+        };
+        await api.updateTransaction(editing.id, data);
+        onCancelEdit();
+      } else {
+        const data: TransactionInput = {
+          type,
+          amount: value,
+          category,
+          description: description.trim() || null,
+          date,
+        };
+        await api.createTransaction(data);
+        setAmount("");
+        setDescription("");
+      }
+      onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
@@ -68,8 +93,8 @@ export function TransactionForm({ onCreated }: Props) {
   }
 
   return (
-    <form className="card form" onSubmit={handleSubmit}>
-      <h2>{t("addTransaction")}</h2>
+    <form className={`card form ${editing ? "editing" : ""}`} onSubmit={handleSubmit}>
+      <h2>{editing ? t("edit") : t("addTransaction")}</h2>
 
       <div className="type-toggle" role="tablist">
         <button
@@ -106,7 +131,7 @@ export function TransactionForm({ onCreated }: Props) {
         <select value={category} onChange={(e) => setCategory(e.target.value)}>
           {categories.map((c) => (
             <option key={c} value={c}>
-              {categoryLabel(c)}
+              {c}
             </option>
           ))}
         </select>
@@ -135,9 +160,16 @@ export function TransactionForm({ onCreated }: Props) {
 
       {error && <p className="form-error">{error}</p>}
 
-      <button type="submit" className="btn-primary" disabled={submitting}>
-        {submitting ? t("saving") : t("add")}
-      </button>
+      <div className="form-actions">
+        <button type="submit" className="btn-primary" disabled={submitting}>
+          {submitting ? t("saving") : editing ? t("save") : t("add")}
+        </button>
+        {editing && (
+          <button type="button" className="btn-ghost" onClick={onCancelEdit}>
+            {t("cancel")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }

@@ -522,6 +522,33 @@ select:focus {
 .tx.income .tx-amount { color: var(--accent); }
 .tx.expense .tx-amount { color: var(--danger); }
 
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions .btn-primary {
+  flex: 1;
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .btn-delete {
   background: transparent;
   border: none;
