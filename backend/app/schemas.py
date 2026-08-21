@@ -34,3 +34,22 @@ class TransactionRead(TransactionBase):
     created_at: datetime.datetime
 
     model_config = {"from_attributes": True}
+
+
+class BudgetBase(BaseModel):
+    category: str = Field(min_length=1, max_length=50)
+    monthly_limit: float = Field(gt=0)
+
+
+class BudgetCreate(BudgetBase):
+    pass
+
+
+class BudgetUpdate(BaseModel):
+    category: str | None = Field(default=None, min_length=1, max_length=50)
+    monthly_limit: float | None = Field(default=None, gt=0)
+
+
+class BudgetRead(BudgetBase):
+    id: int
+    spent: float

@@ -18,3 +18,13 @@ class Transaction(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    category: Mapped[str] = mapped_column(
+        String(50), nullable=False, unique=True, index=True
+    )
+    monthly_limit: Mapped[float] = mapped_column(Float, nullable=False)

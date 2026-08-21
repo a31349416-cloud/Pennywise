@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, engine
-from .routers import statistics, transactions
+from .routers import budgets, statistics, transactions
 
 app = FastAPI(
     title="Pennywise API",
@@ -20,6 +20,7 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 app.include_router(transactions.router)
 app.include_router(statistics.router)
+app.include_router(budgets.router)
 
 
 @app.get("/api/health")

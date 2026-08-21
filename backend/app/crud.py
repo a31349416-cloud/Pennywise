@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import models, schemas
@@ -64,3 +64,56 @@ def list_categories(db: Session) -> list[str]:
         models.Transaction.category
     )
     return list(db.scalars(stmt))
+
+
+# ---------- Budgets ----------
+
+
+def list_budgets(db: Session) -> list[models.Budget]:
+    return list(db.scalars(select(models.Budget).order_by(models.Budget.category)))
+
+
+def get_budget(db: Session, budget_id: int) -> models.Budget | None:
+    return db.get(models.Budget, budget_id)
+
+
+def get_budget_by_category(
+    db: Session, category: str
+) -> models.Budget | None:
+    return db.scalar(select(models.Budget).where(models.Budget.category == category))
+
+
+def create_budget(db: Session, data: schemas.BudgetCreate) -> models.Budget:
+    budget = models.Budget(**data.model_dump())
+    db.add(budget)
+    db.commit()
+    db.refresh(budget)
+    return budget
+
+
+def update_budget(
+    db: Session, budget: models.Budget, data: schemas.BudgetUpdate
+) -> models.Budget:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(budget, field, value)
+    db.commit()
+    db.refresh(budget)
+    return budget
+
+
+def delete_budget(db: Session, budget: models.Budget) -> None:
+    db.delete(budget)
+    db.commit()
+
+
+def spent_this_month(
+    db: Session, category: str, month_start: datetime.date
+) -> float:
+    total = db.scalar(
+        select(func.coalesce(func.sum(models.Transaction.amount), 0.0)).where(
+            models.Transaction.type == "expense",
+            models.Transaction.category == category,
+            models.Transaction.date >= month_start,
+        )
+    )
+    return float(total or 0.0)
