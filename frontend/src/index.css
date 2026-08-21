@@ -1140,6 +1140,12 @@ select:focus {
 .day-net.pos { color: var(--accent); }
 .day-net.neg { color: var(--danger); }
 
+.show-more {
+  display: block;
+  margin: 14px auto 2px;
+  padding: 8px 22px;
+}
+
 .tx time {
   color: var(--text-dim);
   font-size: 0.85rem;

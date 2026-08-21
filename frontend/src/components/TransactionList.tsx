@@ -35,6 +35,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
   }
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [search, setSearch] = useState("");
+  const [visibleDays, setVisibleDays] = useState(7);
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
@@ -116,6 +117,11 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       ),
     [filters, search],
   );
+
+  // Reset pagination when the result set changes shape.
+  useEffect(() => {
+    setVisibleDays(7);
+  }, [filters, search, monthRange.key]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -251,7 +257,8 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       {groups.length === 0 ? (
         <p className="empty">{t("noTransactions")}</p>
       ) : (
-        groups.map((g) => (
+        <>
+          {groups.slice(0, visibleDays).map((g) => (
           <div key={g.date} className="day-group">
             <div className="day-header">
               <span>{formatDayLabel(g.date)}</span>
@@ -290,7 +297,17 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
               ))}
             </ul>
           </div>
-        ))
+          ))}
+          {groups.length > visibleDays && (
+            <button
+              type="button"
+              className="btn-ghost show-more"
+              onClick={() => setVisibleDays((n) => n + 14)}
+            >
+              {t("showMore")} ({groups.length - visibleDays})
+            </button>
+          )}
+        </>
       )}
     </section>
   );
