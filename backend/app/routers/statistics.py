@@ -1,0 +1,95 @@
+import datetime
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..models import Transaction
+
+router = APIRouter(prefix="/api/statistics", tags=["statistics"])
+
+
+def _period_filter(stmt, date_from: datetime.date | None, date_to: datetime.date | None):
+    if date_from:
+        stmt = stmt.where(Transaction.date >= date_from)
+    if date_to:
+        stmt = stmt.where(Transaction.date <= date_to)
+    return stmt
+
+
+@router.get("/summary")
+def summary(
+    date_from: datetime.date | None = None,
+    date_to: datetime.date | None = None,
+    db: Session = Depends(get_db),
+):
+    base = _period_filter(select(Transaction), date_from, date_to).subquery()
+    income = db.scalar(
+        select(func.coalesce(func.sum(base.c.amount), 0.0)).where(
+            base.c.type == "income"
+        )
+    )
+    expense = db.scalar(
+        select(func.coalesce(func.sum(base.c.amount), 0.0)).where(
+            base.c.type == "expense"
+        )
+    )
+    count = db.scalar(select(func.count()).select_from(base))
+    return {
+        "income": float(income or 0.0),
+        "expense": float(expense or 0.0),
+        "balance": float(income or 0.0) - float(expense or 0.0),
+        "count": int(count or 0),
+    }
+
+
+@router.get("/by-category")
+def by_category(
+    type: str = Query("expense", pattern="^(income|expense)$"),
+    date_from: datetime.date | None = None,
+    date_to: datetime.date | None = None,
+    db: Session = Depends(get_db),
+):
+    stmt = _period_filter(
+        select(Transaction.category, func.sum(Transaction.amount).label("total")).where(
+            Transaction.type == type
+        ),
+        date_from,
+        date_to,
+    )
+    rows = db.execute(
+        stmt.group_by(Transaction.category).order_by(func.sum(Transaction.amount).desc())
+    ).all()
+    return [{"category": r[0], "total": float(r[1])} for r in rows]
+
+
+@router.get("/monthly")
+def monthly(
+    months: int = Query(6, ge=1, le=24),
+    db: Session = Depends(get_db),
+):
+    today = datetime.date.today()
+    first_of_month = today.replace(day=1)
+    start_year, start_month = first_of_month.year, first_of_month.month
+    for _ in range(months - 1):
+        start_month -= 1
+        if start_month == 0:
+            start_month = 12
+            start_year -= 1
+    start_date = datetime.date(start_year, start_month, 1)
+
+    month_expr = func.strftime("%Y-%m", Transaction.date).label("month")
+    stmt = (
+        select(month_expr, Transaction.type, func.sum(Transaction.amount).label("total"))
+        .where(Transaction.date >= start_date)
+        .group_by(month_expr, Transaction.type)
+        .order_by(month_expr)
+    )
+    data: dict[str, dict[str, float]] = {}
+    for month, tx_type, total in db.execute(stmt).all():
+        data.setdefault(month, {"income": 0.0, "expense": 0.0})[tx_type] = float(total)
+    return [
+        {"month": m, "income": v["income"], "expense": v["expense"]}
+        for m, v in sorted(data.items())
+    ]
