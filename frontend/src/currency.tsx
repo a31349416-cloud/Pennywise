@@ -95,6 +95,18 @@ async function fetchAutoRate(base: string, target: string): Promise<number> {
   return rate;
 }
 
+export async function fetchAnyRate(
+  from: string,
+  to: string,
+): Promise<number> {
+  if (from === to) return 1;
+  try {
+    return await fetchAutoRate(from, to);
+  } catch {
+    return await fetchFallbackRate(from, to);
+  }
+}
+
 async function fetchFallbackRate(
   base: string,
   target: string,

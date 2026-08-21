@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CURRENCIES, useCurrency } from "../currency";
 import { useI18n } from "../i18n";
+import { CurrencyConverter } from "./CurrencyConverter";
 
 export function RateBar() {
   const { t } = useI18n();
@@ -42,7 +43,8 @@ export function RateBar() {
           : null;
 
   return (
-    <div className="rate-bar card">
+    <>
+      <div className="rate-bar card">
       <label className="rate-block">
         <span>{t("recordsCurrency")}</span>
         <select
@@ -96,6 +98,9 @@ export function RateBar() {
       {rateSource === "manual" && (
         <span className="rate-hint">{t("manualPinned")}</span>
       )}
-    </div>
+      </div>
+
+      <CurrencyConverter />
+    </>
   );
 }
