@@ -36,8 +36,11 @@ def create_transaction(data: schemas.TransactionCreate, db=Depends(get_db)):
 
 
 @router.get("/categories", response_model=list[str])
-def list_categories(db: Session = Depends(get_db)):
-    return crud.list_categories(db)
+def list_categories(
+    type: str | None = Query(None, pattern="^(income|expense)$"),
+    db: Session = Depends(get_db),
+):
+    return crud.list_categories(db, tx_type=type)
 
 
 @router.get("/{tx_id}", response_model=schemas.TransactionRead)

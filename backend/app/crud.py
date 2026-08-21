@@ -59,10 +59,13 @@ def delete_transaction(db: Session, tx: models.Transaction) -> None:
     db.commit()
 
 
-def list_categories(db: Session) -> list[str]:
-    stmt = select(models.Transaction.category).distinct().order_by(
-        models.Transaction.category
-    )
+def list_categories(
+    db: Session, tx_type: str | None = None
+) -> list[str]:
+    stmt = select(models.Transaction.category).distinct()
+    if tx_type:
+        stmt = stmt.where(models.Transaction.type == tx_type)
+    stmt = stmt.order_by(models.Transaction.category)
     return list(db.scalars(stmt))
 
 
