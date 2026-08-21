@@ -82,11 +82,21 @@ function manualPinKey(display: string): string {
   return `pennywise-rate-manual-${display}`;
 }
 
+/** fetch with a timeout via AbortController (works in old browsers,
+ * unlike AbortSignal.timeout which needs Safari 16+). */
+function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
 /** Free no-key endpoints, tried in order. */
 async function fetchAutoRate(base: string, target: string): Promise<number> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://open.er-api.com/v6/latest/${base}`,
-    { signal: AbortSignal.timeout(8000) },
+    8000,
   );
   if (!res.ok) throw new Error("er-api failed");
   const data = await res.json();
@@ -111,9 +121,9 @@ async function fetchFallbackRate(
   base: string,
   target: string,
 ): Promise<number> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${base.toLowerCase()}.json`,
-    { signal: AbortSignal.timeout(8000) },
+    8000,
   );
   if (!res.ok) throw new Error("cdn failed");
   const data = await res.json();
@@ -142,7 +152,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [baseCurrency, setBaseState] = useState<string>(() => {
     const saved = localStorage.getItem(BASE_KEY);
     if (saved && CURRENCIES.includes(saved)) return saved;
-    return "USD";
+    return detectCurrency();
   });
   const [rate, setRateState] = useState<number>(1);
   const [rateSource, setRateSource] = useState<RateSource>("loading");
@@ -213,8 +223,13 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   }, [currency]);
 
   const setCurrency = useCallback((code: string) => {
+    // Single switch: the visible currency is also the records currency,
+    // so amounts are entered and shown in the same money unit.
     setCurrencyState(code);
     localStorage.setItem(STORAGE_KEY, code);
+    setBaseState(code);
+    localStorage.setItem(BASE_KEY, code);
+    localStorage.removeItem(manualPinKey(code));
   }, []);
 
   const setBaseCurrency = useCallback((code: string) => {

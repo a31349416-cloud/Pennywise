@@ -9,8 +9,13 @@ import type {
   TransactionUpdate,
 } from "./types";
 
+// In dev (Vite on :5173) the API lives on port 8000 of the same host.
+// In production builds the frontend is served by the backend itself (or by
+// nginx proxying /api), so same-origin relative URLs work everywhere —
+// localhost, LAN IPs and public tunnels alike.
 const BASE_URL =
-  import.meta.env.VITE_API_URL ?? `http://${window.location.hostname}:8000`;
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? `http://${window.location.hostname}:8000` : "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

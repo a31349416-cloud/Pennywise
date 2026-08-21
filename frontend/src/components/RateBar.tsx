@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CURRENCIES, useCurrency } from "../currency";
+import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import { CurrencyConverter } from "./CurrencyConverter";
 
@@ -8,12 +8,10 @@ export function RateBar() {
   const {
     currency,
     baseCurrency,
-    setBaseCurrency,
     rate,
     rateSource,
     refreshAutoRate,
     setManualRate,
-    currencyName,
   } = useCurrency();
 
   const [draft, setDraft] = useState(String(rate));
@@ -21,8 +19,6 @@ export function RateBar() {
   useEffect(() => {
     setDraft(String(rate));
   }, [rate, currency]);
-
-  if (currency === baseCurrency) return null;
 
   function commitManual() {
     const value = parseFloat(draft.replace(",", "."));
@@ -32,6 +28,10 @@ export function RateBar() {
       setDraft(String(rate));
     }
   }
+
+  // The records currency is switched in the header. The rate bar only
+  // appears when the display currency is deliberately different.
+  if (currency === baseCurrency) return <CurrencyConverter />;
 
   const badge =
     rateSource === "auto"
@@ -45,59 +45,47 @@ export function RateBar() {
   return (
     <>
       <div className="rate-bar card">
-      <label className="rate-block">
-        <span>{t("recordsCurrency")}</span>
-        <select
-          value={baseCurrency}
-          onChange={(e) => setBaseCurrency(e.target.value)}
-        >
-          {CURRENCIES.map((code) => (
-            <option key={code} value={code}>
-              {code} — {currencyName(code)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <span className="rate-arrow">→</span>
-
-      <label className="rate-block">
-        <span>
-          1 {baseCurrency} = … {currency}
+        <span className="rate-block">
+          {baseCurrency} → {currency}
         </span>
-        <input
-          type="number"
-          step="any"
-          min="0.000001"
-          placeholder={t("ratePlaceholder")}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitManual}
-          onKeyDown={(e) => e.key === "Enter" && commitManual()}
-        />
-      </label>
 
-      <button type="button" className="btn-ghost" onClick={commitManual}>
-        {t("manualRate")}
-      </button>
+        <label className="rate-block">
+          <span>
+            1 {baseCurrency} = … {currency}
+          </span>
+          <input
+            type="number"
+            step="any"
+            min="0.000001"
+            placeholder={t("ratePlaceholder")}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitManual}
+            onKeyDown={(e) => e.key === "Enter" && commitManual()}
+          />
+        </label>
 
-      {badge && <span className={`rate-badge ${badge.cls}`}>{badge.text}</span>}
-
-      {(rateSource === "manual" || rateSource === "offline") && (
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => {
-            refreshAutoRate();
-          }}
-        >
-          ⟳ {t("useAuto")}
+        <button type="button" className="btn-ghost" onClick={commitManual}>
+          {t("manualRate")}
         </button>
-      )}
 
-      {rateSource === "manual" && (
-        <span className="rate-hint">{t("manualPinned")}</span>
-      )}
+        {badge && <span className={`rate-badge ${badge.cls}`}>{badge.text}</span>}
+
+        {(rateSource === "manual" || rateSource === "offline") && (
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              refreshAutoRate();
+            }}
+          >
+            ⟳ {t("useAuto")}
+          </button>
+        )}
+
+        {rateSource === "manual" && (
+          <span className="rate-hint">{t("manualPinned")}</span>
+        )}
       </div>
 
       <CurrencyConverter />
