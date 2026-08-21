@@ -29,6 +29,7 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
   const [categories, setCategories] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [lastDeleted, setLastDeleted] = useState<Transaction | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Category choices follow the selected transaction type.
@@ -44,13 +45,39 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
       .catch(() => {});
   }, [filters.type]);
 
+  useEffect(() => {
+    if (!lastDeleted) return;
+    const timer = setTimeout(() => setLastDeleted(null), 5000);
+    return () => clearTimeout(timer);
+  }, [lastDeleted]);
+
   async function handleDelete(id: number) {
     setDeletingId(id);
     try {
+      const tx = transactions.find((t) => t.id === id) ?? null;
       await api.deleteTransaction(id);
+      if (tx) setLastDeleted(tx);
       onChanged();
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleUndoDelete() {
+    const tx = lastDeleted;
+    if (!tx) return;
+    setLastDeleted(null);
+    try {
+      await api.createTransaction({
+        type: tx.type,
+        amount: tx.amount,
+        category: tx.category,
+        description: tx.description,
+        date: tx.date,
+      });
+      onChanged();
+    } catch {
+      /* transaction stays deleted */
     }
   }
 
@@ -145,6 +172,15 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
       </div>
 
       {importMsg && <p className="import-msg">{importMsg}</p>}
+
+      {lastDeleted && (
+        <div className="toast" role="status">
+          <span>{t("transactionDeleted")}</span>
+          <button type="button" onClick={handleUndoDelete}>
+            {t("undo")}
+          </button>
+        </div>
+      )}
 
       {transactions.length === 0 ? (
         <p className="empty">{t("noTransactions")}</p>
