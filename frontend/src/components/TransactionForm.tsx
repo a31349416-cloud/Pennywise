@@ -20,7 +20,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
-  const { t } = useI18n();
+  const { t, categoryLabel } = useI18n();
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food");
@@ -131,7 +131,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
         <select value={category} onChange={(e) => setCategory(e.target.value)}>
           {categories.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {categoryLabel(c)}
             </option>
           ))}
         </select>
