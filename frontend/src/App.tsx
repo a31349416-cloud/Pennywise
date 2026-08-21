@@ -42,11 +42,19 @@ function monthRangeOf(key: string): MonthRange {
   };
 }
 
+function shiftMonthKey(key: string, delta: number): string {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function App() {
   const { t } = useI18n();
   const [theme, toggleTheme] = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [monthSummary, setMonthSummary] = useState<Summary | null>(null);
+  const [prevSummary, setPrevSummary] = useState<Summary | null>(null);
   const [monthly, setMonthly] = useState<MonthlyStat[]>([]);
   const [categories, setCategories] = useState<CategoryStat[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -55,18 +63,26 @@ export default function App() {
   const [monthKey, setMonthKey] = useState(currentMonthKey);
 
   const range = useMemo(() => monthRangeOf(monthKey), [monthKey]);
+  const prevRange = useMemo(
+    () => monthRangeOf(shiftMonthKey(monthKey, -1)),
+    [monthKey],
+  );
 
   const refresh = useCallback(async () => {
     try {
-      const [txs, sum, mon, cats, buds] = await Promise.all([
+      const [txs, sum, mSum, pSum, mon, cats, buds] = await Promise.all([
         api.listTransactions(),
         api.summary(),
+        api.summary(range.from, range.to),
+        api.summary(prevRange.from, prevRange.to),
         api.monthly(12),
         api.byCategory("expense", range.from, range.to),
         api.listBudgets(),
       ]);
       setTransactions(txs);
       setSummary(sum);
+      setMonthSummary(mSum);
+      setPrevSummary(pSum);
       setMonthly(mon);
       setCategories(cats);
       setBudgets(buds);
@@ -76,7 +92,7 @@ export default function App() {
         err instanceof Error ? `${err.message}. ${t("backendError")}` : t("backendError"),
       );
     }
-  }, [t, range]);
+  }, [t, range, prevRange]);
 
   useEffect(() => {
     refresh();
@@ -113,7 +129,13 @@ export default function App() {
 
         <div className="content">
           <MonthNav monthKey={monthKey} onChange={setMonthKey} />
-          {summary && <SummaryCards summary={summary} />}
+          {summary && (
+            <SummaryCards
+              summary={summary}
+              monthSummary={monthSummary}
+              prevSummary={prevSummary}
+            />
+          )}
           <div className="dashboard">
             <MonthlyChart data={monthly} selected={monthKey} />
             <DonutChart data={categories} />

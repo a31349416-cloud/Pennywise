@@ -553,6 +553,29 @@ h2 {
 .stat.income .stat-value { color: var(--accent); }
 .stat.expense .stat-value { color: var(--danger); }
 
+.delta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.delta.up {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.delta.down {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.delta.flat {
+  background: var(--bg-soft);
+  color: var(--text-dim);
+}
+
 /* ---------- Form ---------- */
 
 .form {
