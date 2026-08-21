@@ -75,14 +75,33 @@ function currentLocale(): string {
 interface CurrencyContextValue {
   currency: string;
   setCurrency: (code: string) => void;
+  baseCurrency: string;
+  setBaseCurrency: (code: string) => void;
+  rate: number;
+  setRate: (value: number) => void;
   formatMoney: (amount: number) => string;
   currencyName: (code: string) => string;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
+function rateKey(display: string): string {
+  return `pennywise-rate-${display}`;
+}
+
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState<string>(detectCurrency);
+  const [baseCurrency, setBaseState] = useState<string>(() => {
+    const saved = localStorage.getItem("pennywise-base");
+    if (saved && CURRENCIES.includes(saved)) return saved;
+    return "USD";
+  });
+  const [rate, setRateState] = useState<number>(1);
+
+  useEffect(() => {
+    const saved = parseFloat(localStorage.getItem(rateKey(currency)) ?? "");
+    setRateState(Number.isFinite(saved) && saved > 0 ? saved : 1);
+  }, [currency]);
 
   useEffect(() => {
     document.documentElement.dataset.currency = currency;
@@ -93,13 +112,26 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, code);
   }, []);
 
+  const setBaseCurrency = useCallback((code: string) => {
+    setBaseState(code);
+    localStorage.setItem("pennywise-base", code);
+  }, []);
+
+  const setRate = useCallback(
+    (value: number) => {
+      setRateState(value);
+      localStorage.setItem(rateKey(currency), String(value));
+    },
+    [currency],
+  );
+
   const formatMoney = useCallback(
     (amount: number) =>
       new Intl.NumberFormat(currentLocale(), {
         style: "currency",
         currency,
-      }).format(amount),
-    [currency],
+      }).format(amount * rate),
+    [currency, rate],
   );
 
   const currencyName = useCallback(
@@ -119,7 +151,16 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   return (
     <CurrencyContext.Provider
-      value={{ currency, setCurrency, formatMoney, currencyName }}
+      value={{
+        currency,
+        setCurrency,
+        baseCurrency,
+        setBaseCurrency,
+        rate,
+        setRate,
+        formatMoney,
+        currencyName,
+      }}
     >
       {children}
     </CurrencyContext.Provider>

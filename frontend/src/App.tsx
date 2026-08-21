@@ -5,6 +5,7 @@ import { CurrencySelect } from "./components/CurrencySelect";
 import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthlyChart } from "./components/MonthlyChart";
+import { RateBar } from "./components/RateBar";
 import { SummaryCards } from "./components/SummaryCards";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { TransactionForm } from "./components/TransactionForm";
@@ -73,6 +74,8 @@ export default function App() {
       </header>
 
       {error && <div className="error-banner">{error}</div>}
+
+      <RateBar />
 
       <main className="layout">
         <aside className="sidebar">
