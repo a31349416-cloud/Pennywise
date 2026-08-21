@@ -141,12 +141,79 @@ h2 {
   gap: 8px;
 }
 
-.currency-select {
-  width: auto !important;
-  padding: 7px 8px;
-  font-size: 0.85rem;
+.currency-wrap {
+  position: relative;
+}
+
+.currency-button {
+  background: var(--bg-soft);
+  border: 1px solid var(--card-border);
+  color: var(--text-dim);
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
   font-weight: 700;
-  max-width: 130px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.currency-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.currency-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: min(280px, calc(100vw - 40px));
+  max-height: 340px;
+  overflow-y: auto;
+  z-index: 60;
+  padding: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.currency-search {
+  margin-bottom: 8px;
+}
+
+.currency-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.currency-group {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 8px 6px 4px;
+}
+
+.currency-menu ul button {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.currency-menu ul button:hover {
+  background: var(--bg-soft);
+}
+
+.currency-menu ul button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 /* ---------- Rate bar ---------- */
