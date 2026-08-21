@@ -17,9 +17,21 @@ const COLORS = [
 ];
 
 export function DonutChart({ data }: Props) {
-  const { t, categoryLabel } = useI18n();
-  const { formatMoney } = useCurrency();
+  const { t, categoryLabel, lang } = useI18n();
+  const { currency, formatMoney } = useCurrency();
   const total = data.reduce((sum, d) => sum + d.total, 0);
+
+  function centerLabel(value: number): string {
+    if (value >= 100000) {
+      return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", {
+        style: "currency",
+        currency,
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(value);
+    }
+    return formatMoney(value);
+  }
 
   if (data.length === 0) {
     return (
@@ -62,7 +74,7 @@ export function DonutChart({ data }: Props) {
             return el;
           })}
           <text x="80" y="76" textAnchor="middle" className="donut-total">
-            {formatMoney(total)}
+            {centerLabel(total)}
           </text>
           <text x="80" y="94" textAnchor="middle" className="donut-caption">
             {t("expense")}
