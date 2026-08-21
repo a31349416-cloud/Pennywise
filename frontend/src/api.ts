@@ -79,8 +79,8 @@ export const api = {
     return request(`/api/transactions/${id}`, { method: "DELETE" });
   },
 
-  listCategories(): Promise<string[]> {
-    return request("/api/transactions/categories");
+  listCategories(type?: "income" | "expense"): Promise<string[]> {
+    return request(`/api/transactions/categories${type ? `?type=${type}` : ""}`);
   },
 
   summary(dateFrom?: string, dateTo?: string): Promise<Summary> {

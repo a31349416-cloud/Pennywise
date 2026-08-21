@@ -20,7 +20,7 @@ export function Budgets({ budgets, onChanged }: Props) {
 
   useEffect(() => {
     api
-      .listCategories()
+      .listCategories("expense")
       .then(setCategories)
       .catch(() => {});
   }, []);

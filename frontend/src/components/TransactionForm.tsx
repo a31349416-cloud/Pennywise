@@ -9,13 +9,24 @@ interface Props {
   onCancelEdit: () => void;
 }
 
-const DEFAULT_CATEGORIES = [
+const EXPENSE_CATEGORIES = [
   "Food",
   "Transport",
   "Housing",
   "Entertainment",
   "Health",
+  "Shopping",
+  "Education",
+  "Other",
+];
+
+const INCOME_CATEGORIES = [
   "Salary",
+  "Bonus",
+  "Freelance",
+  "Gift",
+  "Investment",
+  "Sale",
   "Other",
 ];
 
@@ -26,20 +37,24 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
   const [category, setCategory] = useState("Food");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] =
+    useState<string[]>(EXPENSE_CATEGORIES);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Categories depend on the selected transaction type.
   useEffect(() => {
+    const defaults = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
     api
-      .listCategories()
+      .listCategories(type)
       .then((cats) => {
-        if (cats.length > 0) {
-          setCategories([...new Set([...DEFAULT_CATEGORIES, ...cats])].sort());
-        }
+        setCategories([...new Set([...defaults, ...cats])]);
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => setCategories(defaults));
+    setCategory((current) =>
+      defaults.includes(current) ? current : defaults[0],
+    );
+  }, [type]);
 
   useEffect(() => {
     if (editing) {

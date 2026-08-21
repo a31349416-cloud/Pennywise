@@ -151,6 +151,13 @@ const CATEGORY_LABELS: Record<Lang, Record<string, string>> = {
     Health: "Здоров'я",
     Salary: "Зарплата",
     Other: "Інше",
+    Shopping: "Покупки",
+    Education: "Освіта",
+    Bonus: "Бонус",
+    Freelance: "Фріланс",
+    Gift: "Подарунок",
+    Investment: "Інвестиції",
+    Sale: "Продаж",
   },
 };
 
