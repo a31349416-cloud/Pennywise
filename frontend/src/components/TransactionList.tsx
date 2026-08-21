@@ -31,12 +31,18 @@ export function TransactionList({ transactions, onChanged, onEdit }: Props) {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Category choices follow the selected transaction type.
   useEffect(() => {
     api
-      .listCategories()
-      .then(setCategories)
+      .listCategories(filters.type || undefined)
+      .then((cats) => {
+        setCategories(cats);
+        setFilters((f) =>
+          f.category && !cats.includes(f.category) ? { ...f, category: undefined } : f,
+        );
+      })
       .catch(() => {});
-  }, []);
+  }, [filters.type]);
 
   async function handleDelete(id: number) {
     setDeletingId(id);
