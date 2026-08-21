@@ -399,6 +399,27 @@ h2 {
   text-transform: capitalize;
 }
 
+/* ---------- Smart insights ---------- */
+
+.insights {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+
+.insights .delta {
+  margin-left: 4px;
+}
+
+.insights .proj {
+  color: var(--danger);
+}
+
 .toast {
   position: fixed;
   left: 50%;

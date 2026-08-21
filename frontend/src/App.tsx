@@ -7,6 +7,7 @@ import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthNav } from "./components/MonthNav";
 import { MonthlyChart } from "./components/MonthlyChart";
 import { RateBar } from "./components/RateBar";
+import { SmartInsights } from "./components/SmartInsights";
 import { SummaryCards } from "./components/SummaryCards";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { TransactionForm } from "./components/TransactionForm";
@@ -136,6 +137,7 @@ export default function App() {
               prevSummary={prevSummary}
             />
           )}
+          <SmartInsights monthKey={monthKey} monthSummary={monthSummary} />
           <div className="dashboard">
             <MonthlyChart data={monthly} selected={monthKey} />
             <DonutChart data={categories} />
