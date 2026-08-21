@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
-import { CategoryBreakdown } from "./components/CategoryBreakdown";
+import { DonutChart } from "./components/DonutChart";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { MonthlyChart } from "./components/MonthlyChart";
 import { SummaryCards } from "./components/SummaryCards";
@@ -74,7 +74,7 @@ export default function App() {
           {summary && <SummaryCards summary={summary} />}
           <div className="dashboard">
             <MonthlyChart data={monthly} />
-            <CategoryBreakdown data={categories} />
+            <DonutChart data={categories} />
           </div>
           <TransactionList
             transactions={transactions}

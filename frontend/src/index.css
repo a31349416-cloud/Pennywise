@@ -416,6 +416,70 @@ select:focus {
   transition: width 0.4s ease;
 }
 
+/* ---------- Donut chart ---------- */
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.donut-svg {
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+}
+
+.donut-total {
+  fill: var(--text);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.donut-caption {
+  fill: var(--text-dim);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.legend-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legend-pct {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+  .donut-wrap {
+    flex-direction: column;
+  }
+}
+
 /* ---------- Transactions list ---------- */
 
 .list-header {
