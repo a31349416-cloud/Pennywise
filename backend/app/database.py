@@ -59,7 +59,7 @@ def _migrate_float_money(engine) -> None:
 
 def _migrate_user_id(engine) -> None:
     """Add user_id foreign key to tables that existed before multi-tenancy."""
-    _USER_ID_TABLES = ["transactions", "budgets", "recurring_transactions", "savings_goals"]
+    _USER_ID_TABLES = ["transactions", "budgets", "recurring_transactions", "savings_goals", "accounts", "tags", "reminders", "shared_access"]
     inspector = inspect(engine)
     with engine.begin() as conn:
         for table in _USER_ID_TABLES:

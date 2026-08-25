@@ -112,3 +112,70 @@ def monthly(
         {"month": m, "income": v["income"], "expense": v["expense"]}
         for m, v in sorted(data.items())
     ]
+
+
+@router.get("/yearly")
+def yearly(
+    years: int = Query(3, ge=1, le=10),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    today = datetime.date.today()
+    start_date = datetime.date(today.year - years + 1, 1, 1)
+    month_expr = func.strftime("%Y-%m", Transaction.date).label("month")
+    stmt = (
+        select(
+            month_expr,
+            Transaction.type,
+            func.sum(Transaction.amount_cents).label("total_cents"),
+        )
+        .where(Transaction.date >= start_date, Transaction.user_id == user.id)
+        .group_by(month_expr, Transaction.type)
+        .order_by(month_expr)
+    )
+    data: dict[str, dict[str, float]] = {}
+    for month, tx_type, total_cents in db.execute(stmt).all():
+        data.setdefault(month, {"income": 0.0, "expense": 0.0})[tx_type] = round(
+            int(total_cents or 0) / 100, 2
+        )
+    return [
+        {"month": m, "income": v["income"], "expense": v["expense"]}
+        for m, v in sorted(data.items())
+    ]
+
+
+@router.get("/category-trend")
+def category_trend(
+    category: str,
+    months: int = Query(6, ge=1, le=24),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    today = datetime.date.today()
+    first_of_month = today.replace(day=1)
+    start_year, start_month = first_of_month.year, first_of_month.month
+    for _ in range(months - 1):
+        start_month -= 1
+        if start_month == 0:
+            start_month = 12
+            start_year -= 1
+    start_date = datetime.date(start_year, start_month, 1)
+    month_expr = func.strftime("%Y-%m", Transaction.date).label("month")
+    stmt = (
+        select(
+            month_expr,
+            func.sum(Transaction.amount_cents).label("total_cents"),
+        )
+        .where(
+            Transaction.user_id == user.id,
+            Transaction.type == "expense",
+            Transaction.category == category,
+            Transaction.date >= start_date,
+        )
+        .group_by(month_expr)
+        .order_by(month_expr)
+    )
+    return [
+        {"month": m, "total": round(int(cents or 0) / 100, 2)}
+        for m, cents in db.execute(stmt).all()
+    ]

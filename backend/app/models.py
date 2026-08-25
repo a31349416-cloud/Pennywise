@@ -1,5 +1,6 @@
 import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +19,9 @@ class User(Base):
 
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="user")
     budgets: Mapped[list["Budget"]] = relationship(back_populates="user")
+    accounts: Mapped[list["Account"]] = relationship(back_populates="user")
+    tags: Mapped[list["Tag"]] = relationship()
+    reminders: Mapped[list["Reminder"]] = relationship()
 
 
 class Transaction(Base):
@@ -101,3 +105,67 @@ class SavingsGoal(Base):
     @property
     def current(self) -> float:
         return self.current_cents / 100
+
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    type: Mapped[str] = mapped_column(String(20), nullable=False)  # checking|savings|cash|credit|investment
+    balance_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    icon: Mapped[str] = mapped_column(String(10), nullable=False, default="💳")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="accounts")
+
+    @property
+    def balance(self) -> float:
+        return self.balance_cents / 100
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    color: Mapped[str] = mapped_column(String(7), nullable=False, default="#60a5fa")
+
+    __table_args__ = (sa.UniqueConstraint("user_id", "name"),)
+
+
+class TransactionTag(Base):
+    __tablename__ = "transaction_tags"
+
+    transaction_id: Mapped[int] = mapped_column(ForeignKey("transactions.id"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tags.id"), primary_key=True)
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    amount_cents: Mapped[int] = mapped_column(Integer, default=0)
+    remind_date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    repeat: Mapped[str] = mapped_column(String(20), nullable=False, default="none")  # none|monthly|yearly
+    active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    @property
+    def amount(self) -> float:
+        return self.amount_cents / 100
+
+
+class SharedAccess(Base):
+    __tablename__ = "shared_access"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    shared_with_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    permission: Mapped[str] = mapped_column(String(20), nullable=False, default="view")  # view|edit
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())

@@ -1,8 +1,20 @@
 import type {
+  Account,
+  AccountInput,
   Budget,
   CategoryStat,
+  CategoryTrend,
+  GoalInput,
   MonthlyStat,
+  Recurring,
+  RecurringInput,
+  Reminder,
+  ReminderInput,
+  SavingsGoal,
+  SharedAccess,
   Summary,
+  Tag,
+  TagInput,
   Transaction,
   TransactionFilters,
   TransactionInput,
@@ -231,5 +243,103 @@ export const api = {
 
   loadDemoData(): Promise<{ loaded: boolean; transactions: number; budgets: number }> {
     return request("/api/demo/load", { method: "POST" });
+  },
+
+  // Accounts
+  listAccounts(): Promise<Account[]> {
+    return request("/api/accounts");
+  },
+  createAccount(data: AccountInput): Promise<Account> {
+    return request("/api/accounts", { method: "POST", body: JSON.stringify(data) });
+  },
+  updateAccount(id: number, data: Partial<AccountInput>): Promise<Account> {
+    return request(`/api/accounts/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  },
+  deleteAccount(id: number): Promise<void> {
+    return request(`/api/accounts/${id}`, { method: "DELETE" });
+  },
+
+  // Tags
+  listTags(): Promise<Tag[]> {
+    return request("/api/tags");
+  },
+  createTag(data: TagInput): Promise<Tag> {
+    return request("/api/tags", { method: "POST", body: JSON.stringify(data) });
+  },
+  deleteTag(id: number): Promise<void> {
+    return request(`/api/tags/${id}`, { method: "DELETE" });
+  },
+  getTransactionTags(txId: number): Promise<number[]> {
+    return request(`/api/tags/transaction/${txId}`);
+  },
+  setTransactionTags(txId: number, tagIds: number[]): Promise<void> {
+    return request(`/api/tags/transaction/${txId}`, { method: "PUT", body: JSON.stringify({ tag_ids: tagIds }) });
+  },
+
+  // Recurring
+  listRecurring(): Promise<Recurring[]> {
+    return request("/api/recurring");
+  },
+  createRecurring(data: RecurringInput): Promise<Recurring> {
+    return request("/api/recurring", { method: "POST", body: JSON.stringify(data) });
+  },
+  updateRecurring(id: number, data: Partial<RecurringInput & { active: boolean }>): Promise<Recurring> {
+    return request(`/api/recurring/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  },
+  deleteRecurring(id: number): Promise<void> {
+    return request(`/api/recurring/${id}`, { method: "DELETE" });
+  },
+  processRecurring(): Promise<{ processed: number }> {
+    return request("/api/recurring/process", { method: "POST" });
+  },
+
+  // Savings Goals
+  listGoals(): Promise<SavingsGoal[]> {
+    return request("/api/goals");
+  },
+  createGoal(data: GoalInput): Promise<SavingsGoal> {
+    return request("/api/goals", { method: "POST", body: JSON.stringify(data) });
+  },
+  updateGoal(id: number, data: Partial<GoalInput & { current: number }>): Promise<SavingsGoal> {
+    return request(`/api/goals/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  },
+  deleteGoal(id: number): Promise<void> {
+    return request(`/api/goals/${id}`, { method: "DELETE" });
+  },
+
+  // Reminders
+  listReminders(): Promise<Reminder[]> {
+    return request("/api/reminders");
+  },
+  createReminder(data: ReminderInput): Promise<Reminder> {
+    return request("/api/reminders", { method: "POST", body: JSON.stringify(data) });
+  },
+  updateReminder(id: number, data: Partial<ReminderInput & { active: boolean }>): Promise<Reminder> {
+    return request(`/api/reminders/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  },
+  deleteReminder(id: number): Promise<void> {
+    return request(`/api/reminders/${id}`, { method: "DELETE" });
+  },
+  upcomingReminders(days = 7): Promise<Reminder[]> {
+    return request(`/api/reminders/upcoming?days=${days}`);
+  },
+
+  // Shared
+  listShared(): Promise<SharedAccess[]> {
+    return request("/api/shared");
+  },
+  createShared(email: string, permission = "view"): Promise<SharedAccess> {
+    return request("/api/shared", { method: "POST", body: JSON.stringify({ email, permission }) });
+  },
+  deleteShared(id: number): Promise<void> {
+    return request(`/api/shared/${id}`, { method: "DELETE" });
+  },
+
+  // Statistics extras
+  yearly(years = 3): Promise<MonthlyStat[]> {
+    return request(`/api/statistics/yearly?years=${years}`);
+  },
+  categoryTrend(category: string, months = 6): Promise<CategoryTrend[]> {
+    return request(`/api/statistics/category-trend?category=${encodeURIComponent(category)}&months=${months}`);
   },
 };

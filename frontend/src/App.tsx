@@ -16,6 +16,12 @@ import { SummaryCards } from "./components/SummaryCards";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
+import { Accounts } from "./components/Accounts";
+import { RecurringList } from "./components/RecurringList";
+import { SavingsGoals } from "./components/SavingsGoals";
+import { Reminders } from "./components/Reminders";
+import { SharedAccess } from "./components/SharedAccess";
+import { CategoryTrends } from "./components/CategoryTrends";
 import { useI18n } from "./i18n";
 import { currentMonthKey, monthRangeOf, shiftMonthKey } from "./months";
 import { useTheme } from "./useTheme";
@@ -43,6 +49,9 @@ function Dashboard() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return localStorage.getItem("pennywise-tab") || "dashboard";
+  });
   const [monthKey, setMonthKey] = useState<string>(() => {
     const saved = localStorage.getItem("pennywise-month");
     return saved && /^\d{4}-\d{2}$/.test(saved) ? saved : currentMonthKey();
@@ -51,6 +60,14 @@ function Dashboard() {
   useEffect(() => {
     localStorage.setItem("pennywise-month", monthKey);
   }, [monthKey]);
+
+  useEffect(() => {
+    localStorage.setItem("pennywise-tab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    api.processRecurring().then(() => refresh()).catch(() => {});
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -137,6 +154,26 @@ function Dashboard() {
 
       <RateBar />
 
+      <div className="tabs">
+        {[
+          { key: "dashboard", label: "dashboard" },
+          { key: "accounts", label: "accounts" },
+          { key: "recurring", label: "recurring" },
+          { key: "goals", label: "goals" },
+          { key: "reminders", label: "reminders" },
+          { key: "trends", label: "trends" },
+          { key: "shared", label: "shared" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            className={`tab-btn${activeTab === tab.key ? " active" : ""}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {t(tab.label as any)}
+          </button>
+        ))}
+      </div>
+
       <main className="layout">
         <aside className="sidebar">
           <TransactionForm
@@ -147,30 +184,40 @@ function Dashboard() {
         </aside>
 
         <div className="content">
-          <MonthNav monthKey={monthKey} onChange={setMonthKey} />
-          {summary && (
-            <SummaryCards
-              summary={summary}
-              monthSummary={monthSummary}
-              prevSummary={prevSummary}
-            />
+          {activeTab === "dashboard" && (
+            <>
+              <MonthNav monthKey={monthKey} onChange={setMonthKey} />
+              {summary && (
+                <SummaryCards
+                  summary={summary}
+                  monthSummary={monthSummary}
+                  prevSummary={prevSummary}
+                />
+              )}
+              <SmartInsights monthKey={monthKey} monthSummary={monthSummary} />
+              <div className="dashboard">
+                <MonthlyChart data={monthly} selected={monthKey} />
+                <DonutChart data={categories} />
+                <BalanceChart transactions={transactions} monthRange={range} />
+              </div>
+              <Budgets budgets={budgets} onChanged={refresh} />
+              <TransactionList
+                transactions={transactions}
+                monthRange={range}
+                onChanged={refresh}
+                onEdit={(tx) => {
+                  setEditingTx(tx);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </>
           )}
-          <SmartInsights monthKey={monthKey} monthSummary={monthSummary} />
-          <div className="dashboard">
-            <MonthlyChart data={monthly} selected={monthKey} />
-            <DonutChart data={categories} />
-            <BalanceChart transactions={transactions} monthRange={range} />
-          </div>
-          <Budgets budgets={budgets} onChanged={refresh} />
-          <TransactionList
-            transactions={transactions}
-            monthRange={range}
-            onChanged={refresh}
-            onEdit={(tx) => {
-              setEditingTx(tx);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-          />
+          {activeTab === "accounts" && <Accounts onChanged={refresh} />}
+          {activeTab === "recurring" && <RecurringList onChanged={refresh} />}
+          {activeTab === "goals" && <SavingsGoals onChanged={refresh} />}
+          {activeTab === "reminders" && <Reminders onChanged={refresh} />}
+          {activeTab === "trends" && <CategoryTrends onChanged={refresh} />}
+          {activeTab === "shared" && <SharedAccess onChanged={refresh} />}
         </div>
       </main>
     </div>

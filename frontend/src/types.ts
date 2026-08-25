@@ -69,3 +69,99 @@ export interface AuthState {
   token: string | null;
   loading: boolean;
 }
+
+export interface Account {
+  id: number;
+  name: string;
+  type: string;
+  balance: number;
+  currency: string;
+  icon: string;
+  created_at: string;
+}
+
+export interface AccountInput {
+  name: string;
+  type: string;
+  balance?: number;
+  currency?: string;
+  icon?: string;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface TagInput {
+  name: string;
+  color: string;
+}
+
+export interface Recurring {
+  id: number;
+  type: TransactionType;
+  amount: number;
+  category: string;
+  description: string | null;
+  frequency: string;
+  day_of_month: number | null;
+  next_date: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface RecurringInput {
+  type: TransactionType;
+  amount: number;
+  category: string;
+  description?: string | null;
+  frequency: string;
+  day_of_month?: number | null;
+  next_date: string;
+}
+
+export interface SavingsGoal {
+  id: number;
+  name: string;
+  target: number;
+  current: number;
+  deadline: string | null;
+  created_at: string;
+}
+
+export interface GoalInput {
+  name: string;
+  target: number;
+  deadline?: string | null;
+}
+
+export interface Reminder {
+  id: number;
+  title: string;
+  amount: number;
+  remind_date: string;
+  repeat: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ReminderInput {
+  title: string;
+  amount?: number;
+  remind_date: string;
+  repeat?: string;
+}
+
+export interface SharedAccess {
+  id: number;
+  shared_with_email: string;
+  permission: string;
+  created_at: string;
+}
+
+export interface CategoryTrend {
+  month: string;
+  total: number;
+}

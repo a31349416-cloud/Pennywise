@@ -6,12 +6,25 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import auth, budgets, csv_io, demo, statistics, transactions
+from .routers import (
+    accounts,
+    auth,
+    budgets,
+    csv_io,
+    demo,
+    goals,
+    recurring,
+    reminders,
+    shared,
+    statistics,
+    tags,
+    transactions,
+)
 
 app = FastAPI(
     title="Pennywise API",
     description="Personal finance tracker API",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 app.add_middleware(
@@ -28,6 +41,12 @@ app.include_router(statistics.router)
 app.include_router(budgets.router)
 app.include_router(csv_io.router)
 app.include_router(demo.router)
+app.include_router(accounts.router)
+app.include_router(tags.router)
+app.include_router(recurring.router)
+app.include_router(goals.router)
+app.include_router(reminders.router)
+app.include_router(shared.router)
 
 
 @app.get("/api/health")
