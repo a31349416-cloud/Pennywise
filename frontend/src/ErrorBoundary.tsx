@@ -8,7 +8,6 @@ interface State {
   error: Error | null;
 }
 
-/** Shows the error instead of leaving a blank page when rendering crashes. */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
@@ -23,19 +22,23 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div
-          style={{
-            padding: 24,
-            fontFamily: "system-ui, sans-serif",
-            color: "#17202b",
-          }}
-        >
-          <h1>Something went wrong</h1>
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>
-            {this.state.error.message}
-          </pre>
-          <button type="button" onClick={() => location.reload()}>
-            Reload
+        <div className="error-boundary">
+          <h2>Something went wrong</h2>
+          <p>{this.state.error.message}</p>
+          <pre>{this.state.error.stack}</pre>
+          <button
+            className="btn-primary"
+            type="button"
+            onClick={() => this.setState({ error: null })}
+          >
+            Try again
+          </button>
+          <button
+            className="btn-ghost"
+            type="button"
+            onClick={() => location.reload()}
+          >
+            Reload page
           </button>
         </div>
       );

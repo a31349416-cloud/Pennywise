@@ -159,12 +159,13 @@ export function SavingsGoals({ onChanged }: Props) {
                     <div style={{ width: `${pct}%` }} />
                   </div>
                   <span className="progress-text">
-                    {formatMoney(goal.current)} / {formatMoney(goal.target)} ({Math.round(pct)}%)
+                    {formatMoney(goal.current)} / {formatMoney(goal.target)}
                   </span>
+                  <span className="goal-pct">{Math.round(pct)}%</span>
                 </div>
                 {goal.deadline && (
                   <span className="goal-deadline">
-                    {t("deadline")}: {goal.deadline}
+                    {t("deadline")}: {new Date(`${goal.deadline}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                   </span>
                 )}
                 <div className="goal-actions">

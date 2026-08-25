@@ -342,4 +342,15 @@ export const api = {
   categoryTrend(category: string, months = 6): Promise<CategoryTrend[]> {
     return request(`/api/statistics/category-trend?category=${encodeURIComponent(category)}&months=${months}`);
   },
+
+  // Reports
+  reportSummary(dateFrom?: string, dateTo?: string): Promise<{ income: number; expense: number; balance: number; count: number; categories: CategoryStat[] }> {
+    return request(`/api/reports/summary${toQuery({ date_from: dateFrom, date_to: dateTo })}`);
+  },
+  reportUrl(dateFrom?: string, dateTo?: string): string {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    return `${BASE_URL}/api/reports/pdf${params.toString() ? `?${params}` : ""}`;
+  },
 };

@@ -1,14 +1,15 @@
+version: "3.8"
+
 services:
-  backend:
-    build: ./backend
-    container_name: pennywise-backend
+  web:
+    build: .
     ports:
       - "8000:8000"
     environment:
-      - PENNYWISE_DB_PATH=/data/pennywise.db
-      - PENNYWISE_SECRET_KEY=${PENNYWISE_SECRET_KEY:-change-this-to-a-random-secret}
+      - PENNYWISE_SECRET_KEY=${PENNYWISE_SECRET_KEY:-change-me-in-production}
+      - PENNYWISE_DB_PATH=/app/data/pennywise.db
     volumes:
-      - db-data:/data
+      - pennywise-data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
@@ -16,15 +17,5 @@ services:
       timeout: 5s
       retries: 3
 
-  frontend:
-    build: ./frontend
-    container_name: pennywise-frontend
-    ports:
-      - "8080:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
-
 volumes:
-  db-data:
+  pennywise-data:

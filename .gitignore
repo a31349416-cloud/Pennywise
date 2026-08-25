@@ -26,3 +26,7 @@ frontend/.vite/
 # Database
 *.db
 *.sqlite3
+
+# Test coverage
+coverage/
+.vitest/

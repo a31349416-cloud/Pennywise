@@ -3,59 +3,45 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../AuthProvider";
 
 const FEATURES = [
-  { icon: "💰", en: "Track income & expenses", uk: "Облік доходів і витрат" },
-  { icon: "📊", en: "Visual charts & statistics", uk: "Візуальні графіки та статистика" },
-  { icon: "🎯", en: "Set monthly budgets", uk: "Встановлюйте бюджети на місяць" },
   { icon: "💱", en: "Multi-currency support", uk: "Підтримка багатьох валют" },
-  { icon: "📱", en: "Works on any device", uk: "Працює на будь-якому пристрої" },
-  { icon: "🔒", en: "Your data is private & secure", uk: "Ваші дані приватні та захищені" },
+  { icon: "📊", en: "Budget tracking", uk: "Відстеження бюджетів" },
+  { icon: "🎯", en: "Savings goals", uk: "Цілі заощаджень" },
+  { icon: "🔁", en: "Recurring transactions", uk: "Повторювані транзакції" },
+  { icon: "🏦", en: "Multiple accounts", uk: "Кілька рахунків" },
+  { icon: "🔔", en: "Reminders", uk: "Нагадування" },
+  { icon: "📈", en: "Financial reports", uk: "Фінансові звіти" },
+  { icon: "👥", en: "Shared access", uk: "Спільний доступ" },
+  { icon: "📉", en: "Category trends", uk: "Тренди по категоріях" },
 ];
 
-const PLANS = [
-  {
-    name: { en: "Free", uk: "Безкоштовний" },
-    price: { en: "$0", uk: "0 ₴" },
-    period: { en: "forever", uk: "назавжди" },
-    features: {
-      en: [
-        "Unlimited transactions",
-        "Monthly budgets",
-        "CSV export/import",
-        "Multi-currency",
-        "Charts & statistics",
-      ],
-      uk: [
-        "Необмежені транзакції",
-        "Бюджети на місяць",
-        "Експорт/імпорт CSV",
-        "Багато валют",
-        "Графіки та статистика",
-      ],
-    },
-    highlighted: true,
-  },
-  {
-    name: { en: "Pro", uk: "Про" },
-    price: { en: "$4", uk: "149 ₴" },
-    period: { en: "/month", uk: "/місяць" },
-    features: {
-      en: [
-        "Everything in Free",
-        "Recurring transactions",
-        "Savings goals",
-        "Priority support",
-        "Data backup & restore",
-      ],
-      uk: [
-        "Все з Безкоштовного",
-        "Повторювані транзакції",
-        "Цілі заощаджень",
-        "Пріоритетна підтримка",
-        "Бекап та відновлення даних",
-      ],
-    },
-    highlighted: false,
-  },
+const FREE_FEATURES_EN = [
+  "Unlimited transactions",
+  "Multi-currency support",
+  "Budget tracking",
+  "Savings goals",
+  "Recurring transactions",
+  "Multiple accounts",
+  "Reminders",
+  "Financial reports",
+  "Shared access",
+  "Category trends",
+  "CSV export & import",
+  "Charts & statistics",
+];
+
+const FREE_FEATURES_UK = [
+  "Необмежені транзакції",
+  "Підтримка багатьох валют",
+  "Відстеження бюджетів",
+  "Цілі заощаджень",
+  "Повторювані транзакції",
+  "Кілька рахунків",
+  "Нагадування",
+  "Фінансові звіти",
+  "Спільний доступ",
+  "Тренди по категоріях",
+  "Експорт та імпорт CSV",
+  "Графіки та статистика",
 ];
 
 export function Landing() {
@@ -71,26 +57,30 @@ export function Landing() {
           <span className="logo">¢</span>
           <span className="landing-brand">Pennywise</span>
           <div className="landing-nav-links">
-            <a href="#features">{lang === "uk" ? "Фічі" : "Features"}</a>
+            <a href="#features">{lang === "uk" ? "Можливості" : "Features"}</a>
             <a href="#pricing">{lang === "uk" ? "Ціни" : "Pricing"}</a>
-            <Link to="/app" className="btn-ghost">{t("login")}</Link>
+            <Link to="/login" className="btn-ghost">{t("login")}</Link>
           </div>
         </div>
       </nav>
 
-      <section className="hero">
+      <section className="landing-hero">
         <h1>
           <span className="logo">¢</span> Pennywise
         </h1>
-        <p className="hero-tagline">{t("tagline")}</p>
+        <p className="hero-tagline">
+          {lang === "uk"
+            ? "Контролюйте кожну копійку."
+            : "Every penny accounted for."}
+        </p>
         <p className="hero-sub">
           {lang === "uk"
-            ? "Простий та потужний трекер особистих фінансів. Контролюйте кожну копійку."
-            : "Simple and powerful personal finance tracker. Control every penny."}
+            ? "Простий та потужний трекер особистих фінансів. Слідкуйте за бюджетами, цілями заощаджень та рахунками — все в одному місці."
+            : "A simple yet powerful personal finance tracker. Track budgets, savings goals, multiple accounts, and more — all in one place."}
         </p>
         <div className="hero-actions">
-          <Link to="/app" className="btn-primary btn-lg">
-            {lang === "uk" ? "Почати безкоштовно" : "Get started free"}
+          <Link to="/login" className="landing-cta">
+            {lang === "uk" ? "Почати безкоштовно" : "Get Started Free"}
           </Link>
           <a href="#features" className="btn-ghost btn-lg">
             {lang === "uk" ? "Дізнатися більше" : "Learn more"}
@@ -112,27 +102,22 @@ export function Landing() {
 
       <section id="pricing" className="landing-pricing">
         <h2>{lang === "uk" ? "Ціни" : "Pricing"}</h2>
-        <div className="pricing-grid">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.name.en}
-              className={`pricing-card ${plan.highlighted ? "highlighted" : ""}`}
-            >
-              <h3>{lang === "uk" ? plan.name.uk : plan.name.en}</h3>
-              <div className="pricing-price">
-                {lang === "uk" ? plan.price.uk : plan.price.en}
-                <span>{lang === "uk" ? plan.period.uk : plan.period.en}</span>
-              </div>
-              <ul>
-                {(lang === "uk" ? plan.features.uk : plan.features.en).map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-              <Link to="/app" className="btn-primary" style={{ width: "100%", textAlign: "center" }}>
-                {lang === "uk" ? "Почати" : "Get started"}
-              </Link>
+        <div className="pricing-single">
+          <div className="pricing-card highlighted">
+            <h3>{lang === "uk" ? "Безкоштовний" : "Free"}</h3>
+            <div className="pricing-price">
+              $0
+              <span>{lang === "uk" ? " назавжди" : " forever"}</span>
             </div>
-          ))}
+            <ul>
+              {(lang === "uk" ? FREE_FEATURES_UK : FREE_FEATURES_EN).map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+            <Link to="/login" className="btn-primary" style={{ width: "100%", textAlign: "center" }}>
+              {lang === "uk" ? "Почати" : "Get started"}
+            </Link>
+          </div>
         </div>
       </section>
 

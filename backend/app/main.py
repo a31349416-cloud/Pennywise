@@ -1,9 +1,14 @@
+import time
+from collections import defaultdict
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse as StarletteJSONResponse
 
 from .database import Base, engine
 from .routers import (
@@ -15,11 +20,37 @@ from .routers import (
     goals,
     recurring,
     reminders,
+    reports,
     shared,
     statistics,
     tags,
     transactions,
 )
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, max_requests: int = 60, window_seconds: int = 60):
+        super().__init__(app)
+        self.max_requests = max_requests
+        self.window = window_seconds
+        self.requests: dict[str, list[float]] = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        # Only rate-limit auth endpoints
+        if request.url.path.startswith("/api/auth/"):
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            cutoff = now - self.window
+            self.requests[client_ip] = [
+                t for t in self.requests[client_ip] if t > cutoff
+            ]
+            if len(self.requests[client_ip]) >= self.max_requests:
+                return StarletteJSONResponse(
+                    {"detail": "Too many requests. Please try again later."},
+                    status_code=429,
+                )
+            self.requests[client_ip].append(now)
+        return await call_next(request)
 
 app = FastAPI(
     title="Pennywise API",
@@ -33,6 +64,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware)
 
 Base.metadata.create_all(bind=engine)
 app.include_router(auth.router)
@@ -46,6 +78,7 @@ app.include_router(tags.router)
 app.include_router(recurring.router)
 app.include_router(goals.router)
 app.include_router(reminders.router)
+app.include_router(reports.router)
 app.include_router(shared.router)
 
 

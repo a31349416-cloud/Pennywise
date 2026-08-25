@@ -22,6 +22,8 @@ import { SavingsGoals } from "./components/SavingsGoals";
 import { Reminders } from "./components/Reminders";
 import { SharedAccess } from "./components/SharedAccess";
 import { CategoryTrends } from "./components/CategoryTrends";
+import { Reports } from "./components/Reports";
+import { useToast } from "./ToastContext";
 import { useI18n } from "./i18n";
 import { currentMonthKey, monthRangeOf, shiftMonthKey } from "./months";
 import { useTheme } from "./useTheme";
@@ -39,6 +41,7 @@ import type {
 function Dashboard() {
   const { t } = useI18n();
   const { logout } = useAuth();
+  const { showToast } = useToast();
   const [theme, toggleTheme] = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -121,9 +124,9 @@ function Dashboard() {
       setBudgets(buds);
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof Error ? `${err.message}. ${t("backendError")}` : t("backendError"),
-      );
+      const msg = err instanceof Error ? err.message : t("backendError");
+      setError(`${msg}. ${t("backendError")}`);
+      showToast(msg, "error");
     }
   }, [t, range, prevRange]);
 
@@ -162,6 +165,7 @@ function Dashboard() {
           { key: "goals", label: "goals" },
           { key: "reminders", label: "reminders" },
           { key: "trends", label: "trends" },
+          { key: "reports", label: "reports" },
           { key: "shared", label: "shared" },
         ].map((tab) => (
           <button
@@ -217,6 +221,7 @@ function Dashboard() {
           {activeTab === "goals" && <SavingsGoals onChanged={refresh} />}
           {activeTab === "reminders" && <Reminders onChanged={refresh} />}
           {activeTab === "trends" && <CategoryTrends onChanged={refresh} />}
+          {activeTab === "reports" && <Reports onChanged={refresh} />}
           {activeTab === "shared" && <SharedAccess onChanged={refresh} />}
         </div>
       </main>

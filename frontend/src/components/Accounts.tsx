@@ -4,7 +4,7 @@ import { useCurrency } from "../currency";
 import { useI18n } from "../i18n";
 import type { Account, AccountInput } from "../types";
 
-const ICONS = ["💳", "🏦", "💰", "📈", "🏠"];
+const ICONS = ["💳", "🏦", "💰", "📈", "🏠", "🪙"];
 
 interface Props {
   onChanged: () => void;
@@ -21,12 +21,16 @@ export function Accounts({ onChanged }: Props) {
   const [icon, setIcon] = useState(ICONS[0]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
     try {
+      setLoading(true);
       setAccounts(await api.listAccounts());
     } catch {
       /* ignore */
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -78,82 +82,110 @@ export function Accounts({ onChanged }: Props) {
     <section className="card accounts">
       <h2>{t("accounts")}</h2>
 
-      {accounts.length > 0 && (
-        <div className="total-balance">
-          {t("totalBalance")}: <b>{formatMoney(total)}</b>
+      {loading ? (
+        <div className="empty" style={{ padding: "32px 0" }}>
+          <span className="spinner" />
+          <p>{t("loading") || "Loading..."}</p>
         </div>
-      )}
-
-      <form className="account-form" onSubmit={handleAdd}>
-        <input
-          type="text"
-          placeholder={t("accountName")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <select value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="checking">{t("checking")}</option>
-          <option value="savings">{t("savings")}</option>
-          <option value="cash">{t("cash")}</option>
-          <option value="credit">{t("credit")}</option>
-          <option value="investment">{t("investment")}</option>
-        </select>
-        <input
-          type="number"
-          step="0.01"
-          placeholder={t("currentAmount")}
-          value={balance}
-          onChange={(e) => setBalance(e.target.value)}
-        />
-        <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="UAH">UAH</option>
-        </select>
-        <div className="icon-picker">
-          {ICONS.map((ic) => (
-            <button
-              key={ic}
-              type="button"
-              className={`icon-btn${icon === ic ? " selected" : ""}`}
-              onClick={() => setIcon(ic)}
-            >
-              {ic}
-            </button>
-          ))}
-        </div>
-        <button type="submit" className="btn-primary" disabled={busy || !name.trim()}>
-          {t("add")}
-        </button>
-      </form>
-
-      {error && <p className="form-error">{error}</p>}
-
-      {accounts.length === 0 ? (
-        <p className="empty">{t("noAccounts")}</p>
       ) : (
-        <div className="accounts-grid">
-          {accounts.map((a) => (
-            <div key={a.id} className="account-card">
-              <div className="account-header">
-                <span className="account-icon">{a.icon}</span>
-                <div className="account-info">
-                  <span className="account-name">{a.name}</span>
-                  <span className="account-type">{t(a.type as "checking")}</span>
-                </div>
-                <button
-                  className="btn-delete"
-                  onClick={() => handleDelete(a.id)}
-                  aria-label={`Delete account ${a.id}`}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="account-balance">{formatMoney(a.balance)}</div>
+        <>
+          {accounts.length > 0 && (
+            <div className="total-balance">
+              {t("totalBalance")}: <b>{formatMoney(total)}</b>
             </div>
-          ))}
-        </div>
+          )}
+
+          <form className="account-form" onSubmit={handleAdd}>
+            <div className="form-row">
+              <div className="form-group">
+                <label>{t("accountName")}</label>
+                <input
+                  type="text"
+                  placeholder={t("accountName")}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>{t("type") || "Type"}</label>
+                <select value={type} onChange={(e) => setType(e.target.value)}>
+                  <option value="checking">{t("checking")}</option>
+                  <option value="savings">{t("savings")}</option>
+                  <option value="cash">{t("cash")}</option>
+                  <option value="credit">{t("credit")}</option>
+                  <option value="investment">{t("investment")}</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>{t("currentAmount")}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={t("currentAmount")}
+                  value={balance}
+                  onChange={(e) => setBalance(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>{t("currency") || "Currency"}</label>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="UAH">UAH</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>{t("icon") || "Icon"}</label>
+              <div className="emoji-picker">
+                {ICONS.map((ic) => (
+                  <button
+                    key={ic}
+                    type="button"
+                    className={`emoji-btn${icon === ic ? " selected" : ""}`}
+                    onClick={() => setIcon(ic)}
+                  >
+                    {ic}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button type="submit" className="btn-primary" disabled={busy || !name.trim()}>
+              {t("add")}
+            </button>
+          </form>
+
+          {error && <p className="form-error">{error}</p>}
+
+          {accounts.length === 0 ? (
+            <p className="empty">{t("noAccounts")}</p>
+          ) : (
+            <div className="accounts-grid">
+              {accounts.map((a) => (
+                <div key={a.id} className="account-card">
+                  <div className="account-header">
+                    <span className="account-icon">{a.icon}</span>
+                    <div className="account-info">
+                      <span className="account-name">{a.name}</span>
+                      <span className="account-type">{t(a.type as "checking")}</span>
+                    </div>
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDelete(a.id)}
+                      aria-label={`Delete account ${a.id}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="account-balance">{formatMoney(a.balance)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

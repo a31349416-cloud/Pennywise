@@ -13,6 +13,10 @@ export type Lang = "en" | "uk";
 
 const dict = {
   en: {
+    loading: "Loading...",
+    type: "Type",
+    currency: "Currency",
+    icon: "Icon",
     tagline: "Track every penny",
     addTransaction: "Add transaction",
     expense: "Expense",
@@ -155,12 +159,18 @@ const dict = {
     selectCategory: "Select category",
     yearlyTrends: "Yearly Trends",
     exportPdf: "Export PDF",
+    dateFrom: "From date",
+    dateTo: "To date",
     noDataYet: "Not enough data yet.",
     saveGoal: "Save progress",
     withdrawGoal: "Withdraw",
     deleteConfirm: "Are you sure?",
   },
   uk: {
+    loading: "Завантаження...",
+    type: "Тип",
+    currency: "Валюта",
+    icon: "Іконка",
     tagline: "Обліковуй кожну копійку",
     addTransaction: "Додати транзакцію",
     expense: "Витрата",
@@ -303,6 +313,8 @@ const dict = {
     selectCategory: "Оберіть категорію",
     yearlyTrends: "Річні тренди",
     exportPdf: "Експорт PDF",
+    dateFrom: "Від дати",
+    dateTo: "До дати",
     noDataYet: "Недостатньо даних.",
     saveGoal: "Зберегти прогрес",
     withdrawGoal: "Зняти",

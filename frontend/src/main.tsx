@@ -6,17 +6,20 @@ import { AuthProvider } from './AuthProvider.tsx'
 import { ErrorBoundary } from './ErrorBoundary.tsx'
 import { CurrencyProvider } from './currency.tsx'
 import { I18nProvider } from './i18n.tsx'
+import { ToastProvider } from './ToastContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <I18nProvider>
-        <AuthProvider>
-          <CurrencyProvider>
-            <AppRouter />
-          </CurrencyProvider>
-        </AuthProvider>
-      </I18nProvider>
+      <ToastProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <CurrencyProvider>
+              <AppRouter />
+            </CurrencyProvider>
+          </AuthProvider>
+        </I18nProvider>
+      </ToastProvider>
     </ErrorBoundary>
   </StrictMode>,
 )
