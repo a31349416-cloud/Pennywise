@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..auth import get_current_user
 from ..database import get_db
-from ..models import Transaction
+from ..models import Transaction, User
 
 router = APIRouter(prefix="/api/statistics", tags=["statistics"])
 
@@ -23,8 +24,13 @@ def summary(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    base = _period_filter(select(Transaction), date_from, date_to).subquery()
+    base = _period_filter(
+        select(Transaction).where(Transaction.user_id == user.id),
+        date_from,
+        date_to,
+    ).subquery()
     income = db.scalar(
         select(func.coalesce(func.sum(base.c.amount_cents), 0)).where(
             base.c.type == "income"
@@ -52,12 +58,13 @@ def by_category(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     stmt = _period_filter(
         select(
             Transaction.category,
             func.sum(Transaction.amount_cents).label("total_cents"),
-        ).where(Transaction.type == type),
+        ).where(Transaction.type == type, Transaction.user_id == user.id),
         date_from,
         date_to,
     )
@@ -73,6 +80,7 @@ def by_category(
 def monthly(
     months: int = Query(6, ge=1, le=24),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     today = datetime.date.today()
     first_of_month = today.replace(day=1)
@@ -91,7 +99,7 @@ def monthly(
             Transaction.type,
             func.sum(Transaction.amount_cents).label("total_cents"),
         )
-        .where(Transaction.date >= start_date)
+        .where(Transaction.date >= start_date, Transaction.user_id == user.id)
         .group_by(month_expr, Transaction.type)
         .order_by(month_expr)
     )

@@ -6,24 +6,23 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import budgets, csv_io, statistics, transactions
+from .routers import auth, budgets, csv_io, statistics, transactions
 
 app = FastAPI(
     title="Pennywise API",
     description="Personal finance tracker API",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    # Only local development (Vite on :5173) and LAN devices need cross-origin
-    # access. Public websites must not be able to call the API from a browser.
     allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 Base.metadata.create_all(bind=engine)
+app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(statistics.router)
 app.include_router(budgets.router)

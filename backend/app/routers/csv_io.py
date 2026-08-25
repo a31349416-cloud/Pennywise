@@ -8,8 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
+from ..auth import get_current_user
 from ..crud import to_cents
 from ..database import get_db
+from ..models import User
 
 router = APIRouter(prefix="/api/csv", tags=["csv"])
 
@@ -17,9 +19,14 @@ CSV_COLUMNS = ["id", "type", "amount", "category", "description", "date"]
 
 
 @router.get("/export")
-def export_csv(db: Session = Depends(get_db)):
-    stmt = select(models.Transaction).order_by(
-        models.Transaction.date, models.Transaction.id
+def export_csv(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    stmt = (
+        select(models.Transaction)
+        .where(models.Transaction.user_id == user.id)
+        .order_by(models.Transaction.date, models.Transaction.id)
     )
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=CSV_COLUMNS)
@@ -46,7 +53,11 @@ def export_csv(db: Session = Depends(get_db)):
 
 
 @router.post("/import")
-def import_csv(file: UploadFile, db: Session = Depends(get_db)):
+def import_csv(
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     if file.content_type not in ("text/csv", "application/vnd.ms-excel", None):
         raise HTTPException(status_code=415, detail="Expected a CSV file")
 
@@ -66,6 +77,7 @@ def import_csv(file: UploadFile, db: Session = Depends(get_db)):
             if tx_type not in ("income", "expense") or amount <= 0:
                 raise ValueError
             tx = models.Transaction(
+                user_id=user.id,
                 type=tx_type,
                 amount_cents=to_cents(amount),
                 category=row["category"].strip(),

@@ -7,21 +7,43 @@ import type {
   TransactionFilters,
   TransactionInput,
   TransactionUpdate,
+  User,
 } from "./types";
 
-// In dev (Vite on :5173) the API lives on port 8000 of the same host.
-// In production builds the frontend is served by the backend itself (or by
-// nginx proxying /api), so same-origin relative URLs work everywhere —
-// localhost, LAN IPs and public tunnels alike.
 const BASE_URL =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? `http://${window.location.hostname}:8000` : "");
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+  if (token) {
+    localStorage.setItem("pennywise-token", token);
+  } else {
+    localStorage.removeItem("pennywise-token");
+  }
+}
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem("pennywise-token");
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...init,
   });
+  if (res.status === 401) {
+    setAuthToken(null);
+    throw new Error("Session expired. Please log in again.");
+  }
   if (res.status === 204) return undefined as T;
   if (!res.ok) throw new Error(await errorMessage(res));
   return res.json();
@@ -73,6 +95,26 @@ async function listAllTransactions(
     skip += PAGE_SIZE;
   }
 }
+
+export const authApi = {
+  register(email: string, password: string): Promise<User> {
+    return request("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  login(email: string, password: string): Promise<{ access_token: string }> {
+    return request("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  me(): Promise<User> {
+    return request("/api/auth/me");
+  },
+};
 
 export const api = {
   listTransactions(filters: TransactionFilters = {}): Promise<Transaction[]> {
@@ -155,20 +197,26 @@ export const api = {
   },
 
   exportCsvUrl(): string {
-    return `${BASE_URL}/api/csv/export`;
+    return `${BASE_URL}/api/csv/export${authToken ? `?token=${authToken}` : ""}`;
   },
 
   importCsv(file: File): Promise<{ imported: number; skipped: number }> {
     const form = new FormData();
     form.append("file", file);
-    return fetch(`${BASE_URL}/api/csv/import`, { method: "POST", body: form }).then(
-      async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => null);
-          throw new Error(body?.detail ?? `Import failed: ${res.status}`);
-        }
-        return res.json();
-      },
-    );
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers["Authorization"] = `Bearer ${authToken}`;
+    }
+    return fetch(`${BASE_URL}/api/csv/import`, {
+      method: "POST",
+      body: form,
+      headers,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail ?? `Import failed: ${res.status}`);
+      }
+      return res.json();
+    });
   },
 };

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
+import { useAuth } from "./AuthProvider";
+import { AuthForm } from "./components/AuthForm";
 import { Budgets } from "./components/Budgets";
 import { BalanceChart } from "./components/BalanceChart";
 import { CurrencySelect } from "./components/CurrencySelect";
@@ -26,6 +28,7 @@ import type {
 
 export default function App() {
   const { t } = useI18n();
+  const { user, loading, logout } = useAuth();
   const [theme, toggleTheme] = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -107,6 +110,20 @@ export default function App() {
     refresh();
   }, [refresh]);
 
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <span className="logo">¢</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthForm />;
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -118,6 +135,9 @@ export default function App() {
             <CurrencySelect />
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <LanguageToggle />
+            <button className="btn-ghost" onClick={logout} title={t("logout")}>
+              {t("logout")}
+            </button>
           </div>
         </div>
         <p className="tagline">{t("tagline")}</p>

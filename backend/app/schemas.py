@@ -1,7 +1,7 @@
 import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class TransactionType(str, Enum):
@@ -53,3 +53,29 @@ class BudgetUpdate(BaseModel):
 class BudgetRead(BudgetBase):
     id: int
     spent: float
+
+
+# ---------- Auth ----------
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=128)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserRead(BaseModel):
+    id: int
+    email: str
+    created_at: datetime.datetime
+
+    model_config = {"from_attributes": True}

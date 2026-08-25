@@ -3,8 +3,10 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from .. import crud, models, schemas
+from .. import crud, schemas
+from ..auth import get_current_user
 from ..database import get_db
+from ..models import User
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
 
@@ -18,9 +20,11 @@ def list_transactions(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     return crud.list_transactions(
         db,
+        user_id=user.id,
         skip=skip,
         limit=limit,
         tx_type=type,
@@ -31,21 +35,30 @@ def list_transactions(
 
 
 @router.post("", response_model=schemas.TransactionRead, status_code=201)
-def create_transaction(data: schemas.TransactionCreate, db=Depends(get_db)):
-    return crud.create_transaction(db, data)
+def create_transaction(
+    data: schemas.TransactionCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return crud.create_transaction(db, data, user.id)
 
 
 @router.get("/categories", response_model=list[str])
 def list_categories(
     type: str | None = Query(None, pattern="^(income|expense)$"),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    return crud.list_categories(db, tx_type=type)
+    return crud.list_categories(db, user.id, tx_type=type)
 
 
 @router.get("/{tx_id}", response_model=schemas.TransactionRead)
-def get_transaction(tx_id: int, db: Session = Depends(get_db)):
-    tx = crud.get_transaction(db, tx_id)
+def get_transaction(
+    tx_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    tx = crud.get_transaction(db, tx_id, user.id)
     if tx is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return tx
@@ -53,17 +66,24 @@ def get_transaction(tx_id: int, db: Session = Depends(get_db)):
 
 @router.patch("/{tx_id}", response_model=schemas.TransactionRead)
 def update_transaction(
-    tx_id: int, data: schemas.TransactionUpdate, db: Session = Depends(get_db)
+    tx_id: int,
+    data: schemas.TransactionUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    tx = crud.get_transaction(db, tx_id)
+    tx = crud.get_transaction(db, tx_id, user.id)
     if tx is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return crud.update_transaction(db, tx, data)
 
 
 @router.delete("/{tx_id}", status_code=204)
-def delete_transaction(tx_id: int, db: Session = Depends(get_db)):
-    tx = crud.get_transaction(db, tx_id)
+def delete_transaction(
+    tx_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    tx = crud.get_transaction(db, tx_id, user.id)
     if tx is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     crud.delete_transaction(db, tx)

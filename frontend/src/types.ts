@@ -57,3 +57,15 @@ export interface TransactionFilters {
   date_from?: string;
   date_to?: string;
 }
+
+export interface User {
+  id: number;
+  email: string;
+  created_at: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+}

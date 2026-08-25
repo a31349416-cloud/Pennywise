@@ -89,6 +89,14 @@ const dict = {
     noExpenses: "No expenses recorded.",
     backendError:
       "Failed to load data. Is the backend running on port 8000?",
+    login: "Log in",
+    register: "Sign up",
+    email: "Email",
+    password: "Password",
+    passwordPlaceholder: "At least 6 characters",
+    noAccount: "Don't have an account?",
+    hasAccount: "Already have an account?",
+    logout: "Log out",
   },
   uk: {
     tagline: "Обліковуй кожну копійку",
@@ -167,6 +175,14 @@ const dict = {
     noExpenses: "Витрат не зафіксовано.",
     backendError:
       "Не вдалося завантажити дані. Чи запущений бекенд на порту 8000?",
+    login: "Увійти",
+    register: "Зареєструватися",
+    email: "Електронна пошта",
+    password: "Пароль",
+    passwordPlaceholder: "Щонайменше 6 символів",
+    noAccount: "Немає акаунту?",
+    hasAccount: "Вже є акаунт?",
+    logout: "Вийти",
   },
 } as const;
 
