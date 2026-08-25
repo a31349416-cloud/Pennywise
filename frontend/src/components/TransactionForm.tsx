@@ -16,8 +16,16 @@ const EXPENSE_CATEGORIES = [
   "Housing",
   "Entertainment",
   "Health",
-  "Shopping",
   "Education",
+  "Utilities",
+  "Clothing",
+  "Personal Care",
+  "Subscriptions",
+  "Insurance",
+  "Travel",
+  "Kids",
+  "Home",
+  "Gifts & Charity",
   "Other",
 ];
 
