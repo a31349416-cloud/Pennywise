@@ -46,7 +46,12 @@ if FRONTEND_DIST.is_dir():
         name="assets",
     )
 
-    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+    @app.api_route(
+        "/{full_path:path}",
+        include_in_schema=False,
+        response_model=None,
+        methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    )
     async def serve_spa(full_path: str):
         if full_path.startswith("api"):
             return JSONResponse({"detail": "Not found"}, status_code=404)
