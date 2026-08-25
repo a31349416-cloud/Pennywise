@@ -81,6 +81,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [lastDeleted, setLastDeleted] = useState<Transaction | null>(null);
+  const [loadingDemo, setLoadingDemo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Category choices follow the selected transaction type.
@@ -148,6 +149,18 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       setImportMsg(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleLoadDemo() {
+    setLoadingDemo(true);
+    try {
+      await api.loadDemoData();
+      onChanged();
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingDemo(false);
     }
   }
 
@@ -313,6 +326,16 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
         <p className="empty">
           {hasFilters ? t("noResults") : t("noTransactions")}
           {!hasFilters && <span className="empty-hint">{t("noTransactionsHint")}</span>}
+          {!hasFilters && (
+            <button
+              className="btn-ghost"
+              onClick={handleLoadDemo}
+              disabled={loadingDemo}
+              style={{ marginTop: 12 }}
+            >
+              {loadingDemo ? t("saving") : t("loadDemo")}
+            </button>
+          )}
         </p>
       ) : (
         <>

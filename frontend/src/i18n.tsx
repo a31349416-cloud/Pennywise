@@ -97,6 +97,7 @@ const dict = {
     noAccount: "Don't have an account?",
     hasAccount: "Already have an account?",
     logout: "Log out",
+    loadDemo: "Load demo data",
   },
   uk: {
     tagline: "Обліковуй кожну копійку",
@@ -183,6 +184,7 @@ const dict = {
     noAccount: "Немає акаунту?",
     hasAccount: "Вже є акаунт?",
     logout: "Вийти",
+    loadDemo: "Завантажити демо-дані",
   },
 } as const;
 

@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routers import auth, budgets, csv_io, statistics, transactions
+from .routers import auth, budgets, csv_io, demo, statistics, transactions
 
 app = FastAPI(
     title="Pennywise API",
@@ -27,6 +27,7 @@ app.include_router(transactions.router)
 app.include_router(statistics.router)
 app.include_router(budgets.router)
 app.include_router(csv_io.router)
+app.include_router(demo.router)
 
 
 @app.get("/api/health")

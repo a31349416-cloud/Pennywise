@@ -219,4 +219,8 @@ export const api = {
       return res.json();
     });
   },
+
+  loadDemoData(): Promise<{ loaded: boolean; transactions: number; budgets: number }> {
+    return request("/api/demo/load", { method: "POST" });
+  },
 };
