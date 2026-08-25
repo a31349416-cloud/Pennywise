@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { api } from "./api";
 import { useAuth } from "./AuthProvider";
 import { AuthForm } from "./components/AuthForm";
@@ -18,6 +19,7 @@ import { TransactionList } from "./components/TransactionList";
 import { useI18n } from "./i18n";
 import { currentMonthKey, monthRangeOf, shiftMonthKey } from "./months";
 import { useTheme } from "./useTheme";
+import { Landing } from "./pages/Landing";
 import type {
   Budget,
   CategoryStat,
@@ -26,9 +28,9 @@ import type {
   Transaction,
 } from "./types";
 
-export default function App() {
+function Dashboard() {
   const { t } = useI18n();
-  const { user, loading, logout } = useAuth();
+  const { logout } = useAuth();
   const [theme, toggleTheme] = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -110,20 +112,6 @@ export default function App() {
     refresh();
   }, [refresh]);
 
-  if (loading) {
-    return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <span className="logo">¢</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthForm />;
-  }
-
   return (
     <div className="app">
       <header className="app-header">
@@ -184,5 +172,40 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <span className="logo">¢</span>
+        </div>
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+export default function AppRouter() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<AuthForm />} />
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

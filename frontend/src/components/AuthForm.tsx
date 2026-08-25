@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthProvider";
 import { useI18n } from "../i18n";
 
 export function AuthForm() {
   const { t } = useI18n();
   const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +23,7 @@ export function AuthForm() {
       } else {
         await register(email, password);
       }
+      navigate("/app", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -32,7 +35,9 @@ export function AuthForm() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-header">
-          <span className="logo">¢</span>
+          <Link to="/">
+            <span className="logo">¢</span>
+          </Link>
           <h1>Pennywise</h1>
           <p className="tagline">{t("tagline")}</p>
         </div>
