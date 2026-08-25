@@ -20,6 +20,8 @@ import { useI18n } from "./i18n";
 import { currentMonthKey, monthRangeOf, shiftMonthKey } from "./months";
 import { useTheme } from "./useTheme";
 import { Landing } from "./pages/Landing";
+import { Terms } from "./pages/Terms";
+import { Privacy } from "./pages/Privacy";
 import type {
   Budget,
   CategoryStat,
@@ -196,6 +198,8 @@ export default function AppRouter() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<AuthForm />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route
           path="/app"
           element={
