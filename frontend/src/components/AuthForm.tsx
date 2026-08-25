@@ -21,7 +21,15 @@ export function AuthForm() {
       if (isLogin) {
         await login(email, password);
       } else {
-        await register(email, password);
+        try {
+          await register(email, password);
+        } catch (regErr) {
+          if (regErr instanceof Error && regErr.message.includes("already exists")) {
+            await login(email, password);
+          } else {
+            throw regErr;
+          }
+        }
       }
       navigate("/app", { replace: true });
     } catch (err) {

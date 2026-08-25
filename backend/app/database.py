@@ -57,8 +57,32 @@ def _migrate_float_money(engine) -> None:
             conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {old_col}"))
 
 
+def _migrate_user_id(engine) -> None:
+    """Add user_id foreign key to tables that existed before multi-tenancy."""
+    _USER_ID_TABLES = ["transactions", "budgets", "recurring_transactions", "savings_goals"]
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in _USER_ID_TABLES:
+            if not inspector.has_table(table):
+                continue
+            columns = {c["name"] for c in inspector.get_columns(table)}
+            if "user_id" in columns:
+                continue
+            conn.execute(
+                text(
+                    f"ALTER TABLE {table} ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1"
+                )
+            )
+            conn.execute(
+                text(
+                    f"CREATE INDEX IF NOT EXISTS ix_{table}_user_id ON {table} (user_id)"
+                )
+            )
+
+
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 _migrate_float_money(engine)
+_migrate_user_id(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

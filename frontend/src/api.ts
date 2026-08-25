@@ -15,6 +15,11 @@ const BASE_URL =
   (import.meta.env.DEV ? `http://${window.location.hostname}:8000` : "");
 
 let authToken: string | null = null;
+let onAuthExpired: (() => void) | null = null;
+
+export function setOnAuthExpired(cb: (() => void) | null): void {
+  onAuthExpired = cb;
+}
 
 export function setAuthToken(token: string | null): void {
   authToken = token;
@@ -40,12 +45,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
     ...init,
   });
-  if (res.status === 401) {
-    setAuthToken(null);
-    throw new Error("Session expired. Please log in again.");
-  }
   if (res.status === 204) return undefined as T;
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) {
+    const msg = await errorMessage(res);
+    if (res.status === 401 && !path.includes("/api/auth/")) {
+      setAuthToken(null);
+      onAuthExpired?.();
+      throw new Error("Session expired. Please log in again.");
+    }
+    throw new Error(msg);
+  }
   return res.json();
 }
 

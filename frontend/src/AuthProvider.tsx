@@ -2,11 +2,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { authApi, setAuthToken, getStoredToken } from "./api";
+import { authApi, setAuthToken, getStoredToken, setOnAuthExpired } from "./api";
 import type { User } from "./types";
 
 interface AuthContextValue {
@@ -30,6 +31,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [loading] = useState(false);
 
+  const logout = useCallback(() => {
+    setAuthToken(null);
+    setUser(null);
+  }, []);
+
+  useEffect(() => {
+    setOnAuthExpired(() => setUser(null));
+    return () => setOnAuthExpired(null);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     setAuthToken(res.access_token);
@@ -41,11 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await authApi.login(email, password);
     setAuthToken(res.access_token);
     setUser({ id: 0, email, created_at: "" });
-  }, []);
-
-  const logout = useCallback(() => {
-    setAuthToken(null);
-    setUser(null);
   }, []);
 
   const value = useMemo(
