@@ -1,46 +1,41 @@
 # Pennywise
 
-Особистий фінансовий трекер: облік доходів і витрат, категорії, статистика.
+Особистий фінансовий трекер: облік доходів і витрат, категорії, статистика, бюджети.
 
 ## Стек
 
-- **Бекенд:** Python 3.12+, FastAPI, SQLAlchemy, SQLite
+- **Бекенд:** Python 3.12+, FastAPI, SQLAlchemy, SQLite, JWT
 - **Фронтенд:** TypeScript, React, Vite
+
+## Можливості
+
+- Реєстрація та вхід (JWT-авторизація)
+- Облік доходів і витрат з категоріями
+- Візуальні графіки (стовпчаста, донат, лінія балансу)
+- Бюджети по категоріях з прогрес-барами
+- Multi-currency (170+ валют, авто-курси)
+- Експорт/імпорт CSV
+- Дві мови: English та Українська
+- Dark/Light теми
+- PWA (встановлення на робочий стіл)
 
 ## Структура
 
 ```
-backend/   — FastAPI API (транзакції, категорії, статистика)
-frontend/  — React SPA (дашборд, список транзакцій, форми)
+backend/   — FastAPI API (авторизація, транзакції, статистика)
+frontend/  — React SPA (дашборд, форма, графіки)
 ```
 
 ## Запуск
 
-### Автономний режим (рекомендовано)
-
-Один сервіс на порту 8000: бекенд + зібраний фронтенд разом. Автозапуск при вході в систему, авторестарт при падінні.
-
-```bash
-./install-service.sh
-```
-
-- Додаток: http://localhost:8000
-- API docs: http://localhost:8000/docs
-
-Керування:
-
-```bash
-systemctl --user status pennywise          # статус
-systemctl --user restart pennywise         # перезапуск
-journalctl --user -u pennywise -f          # логи
-systemctl --user disable --now pennywise   # вимкнути автозапуск
-```
-
-### Docker (будь-яка ОС)
+### Docker (рекомендовано)
 
 Потрібен лише [Docker](https://docs.docker.com/get-docker/):
 
 ```bash
+cp .env.example .env
+# Змініть PENNYWISE_SECRET_KEY на випадковий ключ:
+# python -c "import secrets; print(secrets.token_hex(32))"
 docker compose up --build
 ```
 
@@ -49,27 +44,32 @@ docker compose up --build
 
 Дані зберігаються в Docker-томі `db-data`.
 
+### Автономний режим
+
+Один сервіс на порту 8000:
+
+```bash
+./install-service.sh
+```
+
+- Додаток: http://localhost:8000
+- API docs: http://localhost:8000/docs
+
 ### Доступ з інших пристроїв
 
-**Локальна мережа (Wi-Fi/LAN).** Сервер слухає на всіх інтерфейсах. Дізнайся IP комп'ютера (`ip addr` / `ipconfig`) і відкрий на іншому пристрої:
+**Локальна мережа (Wi-Fi/LAN):**
 
+- Docker: `http://<IP>:8080`
 - автономний режим: `http://<IP>:8000`
 - розробка: `http://<IP>:5173`
-- Docker: `http://<IP>:8080`
 
-> Пристрої мають бути в одній мережі. Перевір, чи файрвол не блокує порти 5173/8080/8000.
-
-**Публічне посилання (інтернет).** Через Cloudflare Tunnel без реєстрації:
+**Публічне посилання (інтернет):**
 
 ```bash
 cloudflared tunnel --url http://localhost:8080
 ```
 
-Команда видасть пубічну https-адресу, яку можна відкрити з будь-якого пристрою.
-
 ### Локально (розробка)
-
-Одна команда — запускає бекенд і фронтенд разом (за потреби сама встановлює залежності):
 
 ```bash
 ./dev.sh
@@ -78,26 +78,9 @@ cloudflared tunnel --url http://localhost:8080
 - Додаток: http://localhost:5173
 - API docs: http://localhost:8000/docs
 
-### Окремо
+## Середовище
 
-#### Бекенд
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-API буде доступне на http://localhost:8000/docs
-
-#### Фронтенд
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Додаток буде доступний на http://localhost:5173
+| Змінна | Опис | За замовчуванням |
+|---|---|---|
+| `PENNYWISE_SECRET_KEY` | Секретний ключ для JWT | `dev-secret-change-in-production` |
+| `PENNYWISE_DB_PATH` | Шлях до файлу БД | `./pennywise.db` |
