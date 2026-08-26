@@ -126,6 +126,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
         category: tx.category,
         description: tx.description,
         date: tx.date,
+        account_id: (tx as { account_id?: number | null }).account_id ?? null,
       });
       onChanged();
     } catch {
@@ -173,6 +174,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
   );
 
   // Reset pagination when the result set changes shape.
+  // oxlint-disable-next-line react/set-state-in-effect -- intentional pagination reset
   useEffect(() => {
     setVisibleDays(7);
   }, [filters, search, monthRange.key]);
@@ -198,7 +200,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       }
       if (
         q &&
-        !`${tx.description ?? ""} ${categoryLabel(tx.category)}`
+        !`${tx.description ?? ""} ${categoryLabel(tx.category)} ${tx.amount} ${tx.date}`
           .toLowerCase()
           .includes(q)
       ) {

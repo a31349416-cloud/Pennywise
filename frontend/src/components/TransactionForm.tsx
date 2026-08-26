@@ -55,8 +55,18 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [categories, setCategories] =
     useState<string[]>(EXPENSE_CATEGORIES);
+  const [accounts, setAccounts] = useState<{ id: number; name: string }[]>([]);
+  const [accountId, setAccountId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Load accounts for optional linking.
+  useEffect(() => {
+    api
+      .listAccounts()
+      .then((accs) => setAccounts(accs.map((a) => ({ id: a.id, name: a.name }))))
+      .catch(() => {});
+  }, []);
 
   // Categories depend on the selected transaction type.
   useEffect(() => {
@@ -72,6 +82,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
     );
   }, [type]);
 
+  // oxlint-disable-next-line react/set-state-in-effect -- sync form with editing prop
   useEffect(() => {
     if (editing) {
       setType(editing.type);
@@ -79,6 +90,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
       setCategory(editing.category);
       setDescription(editing.description ?? "");
       setDate(editing.date);
+      setAccountId(editing.account_id ? String(editing.account_id) : "");
       setError(null);
     }
   }, [editing]);
@@ -93,6 +105,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
     }
     setSubmitting(true);
     try {
+      const account_id = accountId ? parseInt(accountId, 10) : null;
       if (editing) {
         const data: TransactionInput = {
           type,
@@ -100,6 +113,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
           category,
           description: description.trim() || null,
           date,
+          account_id,
         };
         await api.updateTransaction(editing.id, data);
         onCancelEdit();
@@ -110,6 +124,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
           category,
           description: description.trim() || null,
           date,
+          account_id,
         };
         await api.createTransaction(data);
         setAmount("");
@@ -223,6 +238,20 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
           onChange={(e) => setDescription(e.target.value)}
         />
       </label>
+
+      {accounts.length > 0 && (
+        <label>
+          {t("accounts")}
+          <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            <option value="">—</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {error && <p className="form-error">{error}</p>}
 

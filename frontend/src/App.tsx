@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { api } from "./api";
 import { useAuth } from "./AuthProvider";
@@ -69,10 +69,6 @@ function Dashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-    api.processRecurring().then(() => refresh()).catch(() => {});
-  }, []);
-
-  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const el = e.target as HTMLElement | null;
       if (
@@ -125,10 +121,18 @@ function Dashboard() {
       setError(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("backendError");
-      setError(`${msg}. ${t("backendError")}`);
+      setError(msg);
       showToast(msg, "error");
     }
-  }, [t, range, prevRange]);
+  }, [t, range, prevRange, showToast]);
+
+  const didProcessRecurring = useRef(false);
+  useEffect(() => {
+    if (didProcessRecurring.current) return;
+    didProcessRecurring.current = true;
+    api.processRecurring().then(() => refresh()).catch(() => {});
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     refresh();

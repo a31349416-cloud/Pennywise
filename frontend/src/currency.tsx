@@ -96,7 +96,7 @@ function fetchWithTimeout(url: string, ms: number): Promise<Response> {
 async function fetchAutoRate(base: string, target: string): Promise<number> {
   const res = await fetchWithTimeout(
     `https://open.er-api.com/v6/latest/${base}`,
-    8000,
+    5000,
   );
   if (!res.ok) throw new Error("er-api failed");
   const data = await res.json();
@@ -123,7 +123,7 @@ async function fetchFallbackRate(
 ): Promise<number> {
   const res = await fetchWithTimeout(
     `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${base.toLowerCase()}.json`,
-    8000,
+    5000,
   );
   if (!res.ok) throw new Error("cdn failed");
   const data = await res.json();
@@ -167,17 +167,26 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     }
     const pinned = localStorage.getItem(manualPinKey(currency)) === "1";
     const cachedRaw = localStorage.getItem(cacheKey(currency));
+    let hasFreshCache = false;
     if (cachedRaw) {
       try {
         const cached = JSON.parse(cachedRaw);
-        if (typeof cached.rate === "number" && cached.rate > 0) {
+        const age = cached.date ? Date.now() - new Date(cached.date).getTime() : Infinity;
+        const isFresh = typeof cached.rate === "number" && cached.rate > 0 && age < 1000 * 60 * 60 * 12;
+        if (isFresh) {
           setRateState(cached.rate);
           setRateSource("auto");
+          hasFreshCache = true;
+        } else if (typeof cached.rate === "number" && cached.rate > 0) {
+          // Stale cache — use as fallback but mark offline until refresh
+          setRateState(cached.rate);
+          setRateSource("offline");
         }
       } catch {
         /* ignore */
       }
-    } else {
+    }
+    if (!hasFreshCache && !cachedRaw) {
       const manual = parseFloat(localStorage.getItem(manualKey(currency)) ?? "");
       if (Number.isFinite(manual) && manual > 0) {
         setRateState(manual);

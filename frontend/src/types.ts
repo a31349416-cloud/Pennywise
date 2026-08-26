@@ -7,6 +7,7 @@ export interface Transaction {
   category: string;
   description: string | null;
   date: string;
+  account_id?: number | null;
   created_at: string;
 }
 
@@ -16,6 +17,7 @@ export interface TransactionInput {
   category: string;
   description?: string | null;
   date: string;
+  account_id?: number | null;
 }
 
 export interface TransactionUpdate {
@@ -24,6 +26,15 @@ export interface TransactionUpdate {
   category?: string;
   description?: string | null;
   date?: string;
+  account_id?: number | null;
+}
+
+export interface TransactionFilters {
+  type?: TransactionType | "";
+  category?: string;
+  date_from?: string;
+  date_to?: string;
+  account_id?: string;
 }
 
 export interface Summary {
@@ -49,13 +60,6 @@ export interface Budget {
   category: string;
   monthly_limit: number;
   spent: number;
-}
-
-export interface TransactionFilters {
-  type?: TransactionType | "";
-  category?: string;
-  date_from?: string;
-  date_to?: string;
 }
 
 export interface User {

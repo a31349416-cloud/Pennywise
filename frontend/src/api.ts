@@ -104,6 +104,7 @@ async function listAllTransactions(
     category: filters.category || undefined,
     date_from: filters.date_from || undefined,
     date_to: filters.date_to || undefined,
+    account_id: filters.account_id || undefined,
   });
   const all: Transaction[] = [];
   let skip = 0;
@@ -352,5 +353,11 @@ export const api = {
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
     return `${BASE_URL}/api/reports/pdf${params.toString() ? `?${params}` : ""}`;
+  },
+  reportTxtUrl(dateFrom?: string, dateTo?: string): string {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+    return `${BASE_URL}/api/reports/txt${params.toString() ? `?${params}` : ""}`;
   },
 };

@@ -24,8 +24,12 @@ export function Reports({ onChanged: _onChanged }: { onChanged: () => void }) {
       .catch(() => {});
   }, [dateFrom, dateTo]);
 
-  function handleExport() {
+  function handleExportPdf() {
     const url = api.reportUrl(dateFrom || undefined, dateTo || undefined);
+    window.open(url, "_blank");
+  }
+  function handleExportTxt() {
+    const url = api.reportTxtUrl(dateFrom || undefined, dateTo || undefined);
     window.open(url, "_blank");
   }
 
@@ -41,8 +45,11 @@ export function Reports({ onChanged: _onChanged }: { onChanged: () => void }) {
           {t("dateTo")}:{" "}
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </label>
-        <button className="btn-primary" onClick={handleExport}>
+        <button className="btn-primary" onClick={handleExportPdf}>
           {t("exportPdf")}
+        </button>
+        <button className="btn-ghost" onClick={handleExportTxt}>
+          TXT
         </button>
       </div>
       {summary && (

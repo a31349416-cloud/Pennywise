@@ -21,19 +21,29 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const token = getStoredToken();
-    if (token) {
-      setAuthToken(token);
-      return { id: 0, email: "", created_at: "" };
-    }
-    return null;
-  });
-  const [loading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const logout = useCallback(() => {
     setAuthToken(null);
     setUser(null);
+  }, []);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    setAuthToken(token);
+    authApi
+      .me()
+      .then((u) => setUser(u))
+      .catch(() => {
+        setAuthToken(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -44,14 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     setAuthToken(res.access_token);
-    setUser({ id: 0, email, created_at: "" });
+    const u = await authApi.me();
+    setUser(u);
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
     await authApi.register(email, password);
     const res = await authApi.login(email, password);
     setAuthToken(res.access_token);
-    setUser({ id: 0, email, created_at: "" });
+    const u = await authApi.me();
+    setUser(u);
   }, []);
 
   const value = useMemo(
