@@ -1,0 +1,20 @@
+# Pennywise — свій хост з HTTPS (Caddy)
+# 1. Встанови Caddy: https://caddyserver.com/docs/install
+# 2. Заміни pennywise.example.com на свій домен і вкажи IP домену на цей сервер
+# 3. Запусти: caddy start  або  sudo caddy run
+
+# Публічний домен (авто HTTPS Let's Encrypt)
+pennywise.example.com {
+	reverse_proxy localhost:8000
+}
+
+# Локальна мережа без домену (http, без сертифіката)
+# Доступ по http://192.168.x.x:8000 вже працює через docker, цей блок опційний
+:80 {
+	@pennywise host pennywise.local
+	handle @pennywise {
+		reverse_proxy localhost:8000
+	}
+	# інший трафік — 404
+	respond "Not found" 404
+}
