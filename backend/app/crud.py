@@ -1,5 +1,7 @@
 import calendar
 import datetime
+import secrets
+import string
 from decimal import Decimal
 
 from sqlalchemy import delete, func, select
@@ -14,6 +16,23 @@ def to_cents(amount: float) -> int:
 
 def to_major(cents: int | None) -> float:
     return round((cents or 0) / 100, 2)
+
+
+def get_family_user_ids(db: Session, user_id: int) -> list[int]:
+    """Return all user ids in the same family, or just the user if no family."""
+    user = db.get(models.User, user_id)
+    if user is None or user.family_id is None:
+        return [user_id]
+    rows = db.scalars(select(models.User.id).where(models.User.family_id == user.family_id))
+    ids = list(rows)
+    return ids if ids else [user_id]
+
+
+def _family_filter(column, user_id: int, db: Session):
+    ids = get_family_user_ids(db, user_id)
+    if len(ids) == 1:
+        return column == ids[0]
+    return column.in_(ids)
 
 
 def _adjust_account_balance(
@@ -37,10 +56,11 @@ def list_transactions(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
     account_id: int | None = None,
+    member: str | None = None,
 ) -> list[models.Transaction]:
     stmt = (
         select(models.Transaction)
-        .where(models.Transaction.user_id == user_id)
+        .where(_family_filter(models.Transaction.user_id, user_id, db))
         .order_by(models.Transaction.date.desc(), models.Transaction.id.desc())
     )
     if tx_type:
@@ -53,12 +73,17 @@ def list_transactions(
         stmt = stmt.where(models.Transaction.date <= date_to)
     if account_id is not None:
         stmt = stmt.where(models.Transaction.account_id == account_id)
+    if member is not None:
+        stmt = stmt.where(models.Transaction.member == member)
     return list(db.scalars(stmt.offset(skip).limit(limit)))
 
 
 def get_transaction(db: Session, tx_id: int, user_id: int) -> models.Transaction | None:
     tx = db.get(models.Transaction, tx_id)
-    if tx is None or tx.user_id != user_id:
+    if tx is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if tx.user_id not in allowed:
         return None
     return tx
 
@@ -66,10 +91,13 @@ def get_transaction(db: Session, tx_id: int, user_id: int) -> models.Transaction
 def create_transaction(
     db: Session, data: schemas.TransactionCreate, user_id: int
 ) -> models.Transaction:
-    # Validate account ownership if account_id is provided.
+    # Validate account ownership if account_id is provided (family accounts are shared).
     if data.account_id is not None:
         acc = db.get(models.Account, data.account_id)
-        if acc is None or acc.user_id != user_id:
+        if acc is None:
+            raise ValueError("Account not found")
+        allowed_acc = get_family_user_ids(db, user_id)
+        if acc.user_id not in allowed_acc:
             raise ValueError("Account not found")
     tx = models.Transaction(
         user_id=user_id,
@@ -79,6 +107,7 @@ def create_transaction(
         description=data.description,
         date=data.date,
         account_id=data.account_id,
+        member=data.member,
     )
     db.add(tx)
     # Update linked account balance atomically with the transaction.
@@ -144,7 +173,7 @@ def list_categories(
 ) -> list[str]:
     stmt = (
         select(models.Transaction.category)
-        .where(models.Transaction.user_id == user_id)
+        .where(_family_filter(models.Transaction.user_id, user_id, db))
         .distinct()
     )
     if tx_type:
@@ -157,10 +186,11 @@ def list_categories(
 
 
 def list_budgets(db: Session, user_id: int) -> list[models.Budget]:
+    # Family-shared budgets
     return list(
         db.scalars(
             select(models.Budget)
-            .where(models.Budget.user_id == user_id)
+            .where(_family_filter(models.Budget.user_id, user_id, db))
             .order_by(models.Budget.category)
         )
     )
@@ -168,7 +198,10 @@ def list_budgets(db: Session, user_id: int) -> list[models.Budget]:
 
 def get_budget(db: Session, budget_id: int, user_id: int) -> models.Budget | None:
     budget = db.get(models.Budget, budget_id)
-    if budget is None or budget.user_id != user_id:
+    if budget is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if budget.user_id not in allowed:
         return None
     return budget
 
@@ -176,12 +209,13 @@ def get_budget(db: Session, budget_id: int, user_id: int) -> models.Budget | Non
 def get_budget_by_category(
     db: Session, category: str, user_id: int
 ) -> models.Budget | None:
-    return db.scalar(
-        select(models.Budget).where(
-            models.Budget.category == category,
-            models.Budget.user_id == user_id,
-        )
-    )
+    ids = get_family_user_ids(db, user_id)
+    stmt = select(models.Budget).where(models.Budget.category == category)
+    if len(ids) == 1:
+        stmt = stmt.where(models.Budget.user_id == ids[0])
+    else:
+        stmt = stmt.where(models.Budget.user_id.in_(ids))
+    return db.scalar(stmt)
 
 
 def create_budget(db: Session, data: schemas.BudgetCreate, user_id: int) -> models.Budget:
@@ -226,7 +260,7 @@ def spent_this_month(
     )
     total = db.scalar(
         select(func.coalesce(func.sum(models.Transaction.amount_cents), 0)).where(
-            models.Transaction.user_id == user_id,
+            _family_filter(models.Transaction.user_id, user_id, db),
             models.Transaction.type == "expense",
             models.Transaction.category == category,
             models.Transaction.date >= month_start,
@@ -243,7 +277,7 @@ def list_accounts(db: Session, user_id: int) -> list[models.Account]:
     return list(
         db.scalars(
             select(models.Account)
-            .where(models.Account.user_id == user_id)
+            .where(_family_filter(models.Account.user_id, user_id, db))
             .order_by(models.Account.name)
         )
     )
@@ -251,7 +285,10 @@ def list_accounts(db: Session, user_id: int) -> list[models.Account]:
 
 def get_account(db: Session, account_id: int, user_id: int) -> models.Account | None:
     acc = db.get(models.Account, account_id)
-    if acc is None or acc.user_id != user_id:
+    if acc is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if acc.user_id not in allowed:
         return None
     return acc
 
@@ -305,7 +342,7 @@ def list_tags(db: Session, user_id: int) -> list[models.Tag]:
     return list(
         db.scalars(
             select(models.Tag)
-            .where(models.Tag.user_id == user_id)
+            .where(_family_filter(models.Tag.user_id, user_id, db))
             .order_by(models.Tag.name)
         )
     )
@@ -313,7 +350,10 @@ def list_tags(db: Session, user_id: int) -> list[models.Tag]:
 
 def get_tag(db: Session, tag_id: int, user_id: int) -> models.Tag | None:
     tag = db.get(models.Tag, tag_id)
-    if tag is None or tag.user_id != user_id:
+    if tag is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if tag.user_id not in allowed:
         return None
     return tag
 
@@ -364,7 +404,7 @@ def list_recurring(db: Session, user_id: int) -> list[models.RecurringTransactio
     return list(
         db.scalars(
             select(models.RecurringTransaction)
-            .where(models.RecurringTransaction.user_id == user_id)
+            .where(_family_filter(models.RecurringTransaction.user_id, user_id, db))
             .order_by(models.RecurringTransaction.next_date)
         )
     )
@@ -372,7 +412,10 @@ def list_recurring(db: Session, user_id: int) -> list[models.RecurringTransactio
 
 def get_recurring(db: Session, rec_id: int, user_id: int) -> models.RecurringTransaction | None:
     rec = db.get(models.RecurringTransaction, rec_id)
-    if rec is None or rec.user_id != user_id:
+    if rec is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if rec.user_id not in allowed:
         return None
     return rec
 
@@ -476,7 +519,7 @@ def list_goals(db: Session, user_id: int) -> list[models.SavingsGoal]:
     return list(
         db.scalars(
             select(models.SavingsGoal)
-            .where(models.SavingsGoal.user_id == user_id)
+            .where(_family_filter(models.SavingsGoal.user_id, user_id, db))
             .order_by(models.SavingsGoal.name)
         )
     )
@@ -484,7 +527,10 @@ def list_goals(db: Session, user_id: int) -> list[models.SavingsGoal]:
 
 def get_goal(db: Session, goal_id: int, user_id: int) -> models.SavingsGoal | None:
     goal = db.get(models.SavingsGoal, goal_id)
-    if goal is None or goal.user_id != user_id:
+    if goal is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if goal.user_id not in allowed:
         return None
     return goal
 
@@ -527,7 +573,7 @@ def list_reminders(db: Session, user_id: int) -> list[models.Reminder]:
     return list(
         db.scalars(
             select(models.Reminder)
-            .where(models.Reminder.user_id == user_id)
+            .where(_family_filter(models.Reminder.user_id, user_id, db))
             .order_by(models.Reminder.remind_date)
         )
     )
@@ -535,7 +581,10 @@ def list_reminders(db: Session, user_id: int) -> list[models.Reminder]:
 
 def get_reminder(db: Session, reminder_id: int, user_id: int) -> models.Reminder | None:
     rem = db.get(models.Reminder, reminder_id)
-    if rem is None or rem.user_id != user_id:
+    if rem is None:
+        return None
+    allowed = get_family_user_ids(db, user_id)
+    if rem.user_id not in allowed:
         return None
     return rem
 
@@ -571,19 +620,8 @@ def delete_reminder(db: Session, rem: models.Reminder) -> None:
 
 
 def upcoming_reminders(db: Session, user_id: int, days: int = 7) -> list[models.Reminder]:
-    import datetime as _dt
-    today = _dt.date.today()
-    until = today + _dt.timedelta(days=days)
-    return list(
-        db.scalars(
-            select(models.Reminder).where(
-                models.Reminder.user_id == user_id,
-                models.Reminder.active == True,
-                models.Reminder.remind_date >= today,
-                models.Reminder.remind_date <= until,
-            )
-        )
-    )
+    # Family-aware
+    return upcoming_reminders_family(db, user_id, days)
 
 
 # ---------- Shared Access ----------
@@ -624,3 +662,102 @@ def user_has_access(db: Session, email: str, owner_id: int) -> models.SharedAcce
             models.SharedAccess.shared_with_email == email,
         )
     )
+
+
+# ---------- Family ----------
+
+
+def _generate_invite_code(db: Session) -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    for _ in range(10):
+        code = "".join(secrets.choice(alphabet) for _ in range(8))
+        exists = db.scalar(select(models.Family).where(models.Family.invite_code == code))
+        if not exists:
+            return code
+    raise RuntimeError("Could not generate invite code")
+
+
+def create_family(db: Session, user_id: int, name: str) -> models.Family:
+    user = db.get(models.User, user_id)
+    if user is None:
+        raise ValueError("User not found")
+    if user.family_id is not None:
+        raise ValueError("Already in a family. Leave first.")
+    code = _generate_invite_code(db)
+    family = models.Family(name=name.strip(), invite_code=code, owner_id=user_id)
+    db.add(family)
+    db.flush()  # get family.id
+    user.family_id = family.id
+    db.add(user)
+    db.commit()
+    db.refresh(family)
+    return family
+
+
+def join_family(db: Session, user_id: int, invite_code: str) -> models.Family:
+    user = db.get(models.User, user_id)
+    if user is None:
+        raise ValueError("User not found")
+    if user.family_id is not None:
+        raise ValueError("Already in a family. Leave first.")
+    code = invite_code.strip().upper()
+    family = db.scalar(select(models.Family).where(models.Family.invite_code == code))
+    if family is None:
+        raise ValueError("Invalid invite code")
+    user.family_id = family.id
+    db.add(user)
+    db.commit()
+    db.refresh(family)
+    return family
+
+
+def leave_family(db: Session, user_id: int) -> None:
+    user = db.get(models.User, user_id)
+    if user is None or user.family_id is None:
+        raise ValueError("Not in a family")
+    fid = user.family_id
+    user.family_id = None
+    db.add(user)
+    db.flush()
+    # If owner leaves and family empty, delete family
+    remaining = db.scalar(select(func.count()).select_from(models.User).where(models.User.family_id == fid))
+    if remaining == 0:
+        fam = db.get(models.Family, fid)
+        if fam:
+            db.delete(fam)
+    elif user.id == db.scalar(select(models.Family.owner_id).where(models.Family.id == fid)):
+        # Transfer ownership to oldest remaining member
+        oldest = db.scalar(select(models.User).where(models.User.family_id == fid).order_by(models.User.id))
+        if oldest:
+            fam = db.get(models.Family, fid)
+            if fam:
+                fam.owner_id = oldest.id
+                db.add(fam)
+    db.commit()
+
+
+def get_family(db: Session, user_id: int) -> models.Family | None:
+    user = db.get(models.User, user_id)
+    if user is None or user.family_id is None:
+        return None
+    return db.get(models.Family, user.family_id)
+
+
+def list_family_members(db: Session, user_id: int) -> list[models.User]:
+    user = db.get(models.User, user_id)
+    if user is None or user.family_id is None:
+        return []
+    return list(db.scalars(select(models.User).where(models.User.family_id == user.family_id).order_by(models.User.email)))
+
+
+def upcoming_reminders_family(db: Session, user_id: int, days: int = 7) -> list[models.Reminder]:
+    today = datetime.date.today()
+    until = today + datetime.timedelta(days=days)
+    ids = get_family_user_ids(db, user_id)
+    stmt = select(models.Reminder).where(
+        models.Reminder.user_id.in_(ids) if len(ids) > 1 else models.Reminder.user_id == ids[0],
+        models.Reminder.active == True,
+        models.Reminder.remind_date >= today,
+        models.Reminder.remind_date <= until,
+    ).order_by(models.Reminder.remind_date)
+    return list(db.scalars(stmt))

@@ -18,6 +18,7 @@ from .routers import (
     budgets,
     csv_io,
     demo,
+    family,
     goals,
     recurring,
     reminders,
@@ -106,6 +107,7 @@ app.include_router(goals.router)
 app.include_router(reminders.router)
 app.include_router(reports.router)
 app.include_router(shared.router)
+app.include_router(family.router)
 
 
 @app.get("/api/health")

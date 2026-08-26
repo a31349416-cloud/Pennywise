@@ -16,6 +16,7 @@ class TransactionBase(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     date: datetime.date
     account_id: int | None = Field(default=None, description="Linked account id")
+    member: str | None = Field(default=None, max_length=50, description="Family member who made the transaction")
 
 
 class TransactionCreate(TransactionBase):
@@ -29,6 +30,7 @@ class TransactionUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     date: datetime.date | None = None
     account_id: int | None = None
+    member: str | None = Field(default=None, max_length=50)
 
 
 class TransactionRead(TransactionBase):
@@ -76,6 +78,34 @@ class Token(BaseModel):
 
 
 class UserRead(BaseModel):
+    id: int
+    email: str
+    family_id: int | None = None
+    created_at: datetime.datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FamilyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class FamilyJoin(BaseModel):
+    invite_code: str = Field(min_length=6, max_length=12)
+
+
+class FamilyRead(BaseModel):
+    id: int
+    name: str
+    invite_code: str
+    owner_id: int
+    created_at: datetime.datetime
+    member_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class FamilyMemberRead(BaseModel):
     id: int
     email: str
     created_at: datetime.datetime

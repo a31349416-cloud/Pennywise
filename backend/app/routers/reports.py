@@ -86,6 +86,7 @@ def _report_lines(
     date_from: datetime.date | None,
     date_to: datetime.date | None,
 ) -> list[str]:
+    # Family-aware: transactions already filtered by family in caller
     income = sum(t.amount_cents for t in transactions if t.type == "income")
     expense = sum(t.amount_cents for t in transactions if t.type == "expense")
     cat_totals: dict[str, int] = {}
@@ -133,19 +134,25 @@ def _report_lines(
 def generate_pdf_report(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
+    member: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """Generate a real PDF report."""
+    from .. import crud
+
+    ids = crud.get_family_user_ids(db, user.id)
     stmt = (
         select(Transaction)
-        .where(Transaction.user_id == user.id)
+        .where(Transaction.user_id.in_(ids) if len(ids) > 1 else Transaction.user_id == ids[0])
         .order_by(Transaction.date.desc())
     )
     if date_from:
         stmt = stmt.where(Transaction.date >= date_from)
     if date_to:
         stmt = stmt.where(Transaction.date <= date_to)
+    if member:
+        stmt = stmt.where(Transaction.member == member)
     transactions = list(db.scalars(stmt))
     lines = _report_lines(user, transactions, date_from, date_to)
     pdf_bytes = _build_pdf(lines)
@@ -161,19 +168,25 @@ def generate_pdf_report(
 def generate_txt_report(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
+    member: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """Plain-text variant for easy copying."""
+    from .. import crud
+
+    ids = crud.get_family_user_ids(db, user.id)
     stmt = (
         select(Transaction)
-        .where(Transaction.user_id == user.id)
+        .where(Transaction.user_id.in_(ids) if len(ids) > 1 else Transaction.user_id == ids[0])
         .order_by(Transaction.date.desc())
     )
     if date_from:
         stmt = stmt.where(Transaction.date >= date_from)
     if date_to:
         stmt = stmt.where(Transaction.date <= date_to)
+    if member:
+        stmt = stmt.where(Transaction.member == member)
     transactions = list(db.scalars(stmt))
     lines = _report_lines(user, transactions, date_from, date_to)
     content = "\n".join(lines)
@@ -189,15 +202,23 @@ def generate_txt_report(
 def report_summary(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
+    member: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """JSON summary for the report page."""
-    stmt = select(Transaction).where(Transaction.user_id == user.id)
+    from .. import crud
+
+    ids = crud.get_family_user_ids(db, user.id)
+    stmt = select(Transaction).where(
+        Transaction.user_id.in_(ids) if len(ids) > 1 else Transaction.user_id == ids[0]
+    )
     if date_from:
         stmt = stmt.where(Transaction.date >= date_from)
     if date_to:
         stmt = stmt.where(Transaction.date <= date_to)
+    if member:
+        stmt = stmt.where(Transaction.member == member)
     transactions = list(db.scalars(stmt))
 
     income = sum(t.amount_cents for t in transactions if t.type == "income") / 100

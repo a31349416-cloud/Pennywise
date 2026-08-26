@@ -123,10 +123,33 @@ def _migrate_shared_unique(engine) -> None:
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_owner_email ON shared_access (owner_id, shared_with_email)"))
 
 
+def _migrate_family(engine) -> None:
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        if inspector.has_table("users"):
+            cols = {c["name"] for c in inspector.get_columns("users")}
+            if "family_id" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN family_id INTEGER REFERENCES families(id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_family_id ON users (family_id)"))
+
+
+def _migrate_transaction_member(engine) -> None:
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        if not inspector.has_table("transactions"):
+            return
+        cols = {c["name"] for c in inspector.get_columns("transactions")}
+        if "member" not in cols:
+            conn.execute(text("ALTER TABLE transactions ADD COLUMN member VARCHAR(50)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_transactions_member ON transactions (member)"))
+
+
 _migrate_float_money(engine)
 _migrate_user_id(engine)
 _migrate_transaction_account(engine)
 _migrate_shared_unique(engine)
+_migrate_family(engine)
+_migrate_transaction_member(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

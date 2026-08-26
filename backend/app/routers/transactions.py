@@ -20,6 +20,7 @@ def list_transactions(
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
     account_id: int | None = None,
+    member: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -33,6 +34,7 @@ def list_transactions(
         date_from=date_from,
         date_to=date_to,
         account_id=account_id,
+        member=member,
     )
 
 
