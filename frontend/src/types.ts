@@ -8,6 +8,7 @@ export interface Transaction {
   description: string | null;
   date: string;
   account_id?: number | null;
+  member?: string | null;
   created_at: string;
 }
 
@@ -18,6 +19,7 @@ export interface TransactionInput {
   description?: string | null;
   date: string;
   account_id?: number | null;
+  member?: string | null;
 }
 
 export interface TransactionUpdate {
@@ -27,6 +29,7 @@ export interface TransactionUpdate {
   description?: string | null;
   date?: string;
   account_id?: number | null;
+  member?: string | null;
 }
 
 export interface TransactionFilters {
@@ -35,6 +38,7 @@ export interface TransactionFilters {
   date_from?: string;
   date_to?: string;
   account_id?: string;
+  member?: string;
 }
 
 export interface Summary {
@@ -63,6 +67,22 @@ export interface Budget {
 }
 
 export interface User {
+  id: number;
+  email: string;
+  family_id?: number | null;
+  created_at: string;
+}
+
+export interface Family {
+  id: number;
+  name: string;
+  invite_code: string;
+  owner_id: number;
+  created_at: string;
+  member_count: number;
+}
+
+export interface FamilyMember {
   id: number;
   email: string;
   created_at: string;

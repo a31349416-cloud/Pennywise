@@ -23,6 +23,7 @@ import { Reminders } from "./components/Reminders";
 import { SharedAccess } from "./components/SharedAccess";
 import { CategoryTrends } from "./components/CategoryTrends";
 import { Reports } from "./components/Reports";
+import { FamilyPanel } from "./components/Family";
 import { useToast } from "./ToastContext";
 import { useI18n } from "./i18n";
 import { currentMonthKey, monthRangeOf, shiftMonthKey } from "./months";
@@ -33,6 +34,7 @@ import { Privacy } from "./pages/Privacy";
 import type {
   Budget,
   CategoryStat,
+  FamilyMember,
   MonthlyStat,
   Summary,
   Transaction,
@@ -51,6 +53,8 @@ function Dashboard() {
   const [categories, setCategories] = useState<CategoryStat[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [selectedMember, setSelectedMember] = useState<string>("");
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem("pennywise-tab") || "dashboard";
@@ -100,15 +104,27 @@ function Dashboard() {
     [monthKey],
   );
 
+  useEffect(() => {
+    api
+      .getFamily()
+      .then((fam) => {
+        if (fam) return api.listFamilyMembers();
+        return [];
+      })
+      .then(setFamilyMembers)
+      .catch(() => {});
+  }, [activeTab]);
+
   const refresh = useCallback(async () => {
     try {
+      const memberFilter = selectedMember || undefined;
       const [txs, sum, mSum, pSum, mon, cats, buds] = await Promise.all([
-        api.listTransactions(),
-        api.summary(),
-        api.summary(range.from, range.to),
-        api.summary(prevRange.from, prevRange.to),
-        api.monthly(12),
-        api.byCategory("expense", range.from, range.to),
+        api.listTransactions(memberFilter ? { member: memberFilter } : {}),
+        api.summary(undefined, undefined, memberFilter),
+        api.summary(range.from, range.to, memberFilter),
+        api.summary(prevRange.from, prevRange.to, memberFilter),
+        api.monthly(12, memberFilter),
+        api.byCategory("expense", range.from, range.to, memberFilter),
         api.listBudgets(),
       ]);
       setTransactions(txs);
@@ -124,7 +140,7 @@ function Dashboard() {
       setError(msg);
       showToast(msg, "error");
     }
-  }, [t, range, prevRange, showToast]);
+  }, [t, range, prevRange, showToast, selectedMember]);
 
   const didProcessRecurring = useRef(false);
   useEffect(() => {
@@ -164,6 +180,7 @@ function Dashboard() {
       <div className="tabs">
         {[
           { key: "dashboard", label: "dashboard" },
+          { key: "family", label: "family" },
           { key: "accounts", label: "accounts" },
           { key: "recurring", label: "recurring" },
           { key: "goals", label: "goals" },
@@ -221,6 +238,7 @@ function Dashboard() {
             </>
           )}
           {activeTab === "accounts" && <Accounts onChanged={refresh} />}
+          {activeTab === "family" && <FamilyPanel onChanged={refresh} />}
           {activeTab === "recurring" && <RecurringList onChanged={refresh} />}
           {activeTab === "goals" && <SavingsGoals onChanged={refresh} />}
           {activeTab === "reminders" && <Reminders onChanged={refresh} />}

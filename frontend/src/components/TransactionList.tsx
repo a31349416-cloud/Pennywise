@@ -78,6 +78,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
 
   const [visibleDays, setVisibleDays] = useState(7);
   const [categories, setCategories] = useState<string[]>([]);
+  const [members, setMembers] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [lastDeleted, setLastDeleted] = useState<Transaction | null>(null);
@@ -96,6 +97,22 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       })
       .catch(() => {});
   }, [filters.type]);
+
+  useEffect(() => {
+    api
+      .getFamily()
+      .then((fam) => {
+        if (!fam) return [];
+        return api.listFamilyMembers();
+      })
+      .then((ms) => {
+        const msNames = ms.map((m) => m.email.split("@")[0]);
+        // also collect unique members from transactions
+        const txMembers = Array.from(new Set(transactions.map((t) => (t as unknown as { member?: string | null }).member).filter(Boolean) as string[]));
+        setMembers(Array.from(new Set([...msNames, ...txMembers])));
+      })
+      .catch(() => {});
+  }, [transactions]);
 
   useEffect(() => {
     if (!lastDeleted) return;
@@ -168,7 +185,7 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
   const hasFilters = useMemo(
     () =>
       Boolean(
-        filters.type || filters.category || filters.date_from || filters.date_to || search.trim(),
+        filters.type || filters.category || filters.date_from || filters.date_to || filters.member || search.trim(),
       ),
     [filters, search],
   );
@@ -198,9 +215,12 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
       if (filters.date_to && tx.date > filters.date_to) {
         return false;
       }
+      if (filters.member && (tx as unknown as { member?: string | null }).member !== filters.member) {
+        return false;
+      }
       if (
         q &&
-        !`${tx.description ?? ""} ${categoryLabel(tx.category)} ${tx.amount} ${tx.date}`
+        !`${tx.description ?? ""} ${categoryLabel(tx.category)} ${tx.amount} ${tx.date} ${(tx as unknown as { member?: string | null }).member ?? ""}`
           .toLowerCase()
           .includes(q)
       ) {
@@ -265,6 +285,18 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
             {categories.map((c) => (
               <option key={c} value={c}>
                 {categoryLabel(c)}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.member ?? ""}
+            onChange={(e) => setFilters((f) => ({ ...f, member: e.target.value || undefined }))}
+          >
+            <option value="">{t("allMembers")}</option>
+            {members.map((m) => (
+              <option key={m} value={m}>
+                {m}
               </option>
             ))}
           </select>
@@ -356,6 +388,11 @@ export function TransactionList({ transactions, monthRange, onChanged, onEdit }:
                   <div className="tx-icon">{tx.type === "income" ? "↓" : "↑"}</div>
                   <div className="tx-info">
                     <span className="tx-category">{categoryLabel(tx.category)}</span>
+                    {(tx as unknown as { member?: string | null }).member && (
+                      <span className="tx-member" style={{ fontSize: "0.75rem", background: "var(--accent-soft)", padding: "2px 6px", borderRadius: 6, marginLeft: 6 }}>
+                        {(tx as unknown as { member: string }).member}
+                      </span>
+                    )}
                     {tx.description && <span className="tx-desc">{tx.description}</span>}
                   </div>
                   <time className="visually-hidden">{g.date}</time>

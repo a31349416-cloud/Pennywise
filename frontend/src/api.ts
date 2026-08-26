@@ -4,6 +4,8 @@ import type {
   Budget,
   CategoryStat,
   CategoryTrend,
+  Family,
+  FamilyMember,
   GoalInput,
   MonthlyStat,
   Recurring,
@@ -105,6 +107,7 @@ async function listAllTransactions(
     date_from: filters.date_from || undefined,
     date_to: filters.date_to || undefined,
     account_id: filters.account_id || undefined,
+    member: filters.member || undefined,
   });
   const all: Transaction[] = [];
   let skip = 0;
@@ -169,11 +172,12 @@ export const api = {
     return request(`/api/transactions/categories${type ? `?type=${type}` : ""}`);
   },
 
-  summary(dateFrom?: string, dateTo?: string): Promise<Summary> {
+  summary(dateFrom?: string, dateTo?: string, member?: string): Promise<Summary> {
     return request(
       `/api/statistics/summary${toQuery({
         date_from: dateFrom,
         date_to: dateTo,
+        member,
       })}`,
     );
   },
@@ -182,18 +186,20 @@ export const api = {
     type: "income" | "expense" = "expense",
     dateFrom?: string,
     dateTo?: string,
+    member?: string,
   ): Promise<CategoryStat[]> {
     return request(
       `/api/statistics/by-category${toQuery({
         type,
         date_from: dateFrom,
         date_to: dateTo,
+        member,
       })}`,
     );
   },
 
-  monthly(months = 6): Promise<MonthlyStat[]> {
-    return request(`/api/statistics/monthly?months=${months}`);
+  monthly(months = 6, member?: string): Promise<MonthlyStat[]> {
+    return request(`/api/statistics/monthly?months=${months}${member ? `&member=${encodeURIComponent(member)}` : ""}`);
   },
 
   listBudgets(): Promise<Budget[]> {
@@ -337,27 +343,46 @@ export const api = {
   },
 
   // Statistics extras
-  yearly(years = 3): Promise<MonthlyStat[]> {
-    return request(`/api/statistics/yearly?years=${years}`);
+  yearly(years = 3, member?: string): Promise<MonthlyStat[]> {
+    return request(`/api/statistics/yearly?years=${years}${member ? `&member=${encodeURIComponent(member)}` : ""}`);
   },
-  categoryTrend(category: string, months = 6): Promise<CategoryTrend[]> {
-    return request(`/api/statistics/category-trend?category=${encodeURIComponent(category)}&months=${months}`);
+  categoryTrend(category: string, months = 6, member?: string): Promise<CategoryTrend[]> {
+    return request(`/api/statistics/category-trend?category=${encodeURIComponent(category)}&months=${months}${member ? `&member=${encodeURIComponent(member)}` : ""}`);
   },
 
   // Reports
-  reportSummary(dateFrom?: string, dateTo?: string): Promise<{ income: number; expense: number; balance: number; count: number; categories: CategoryStat[] }> {
-    return request(`/api/reports/summary${toQuery({ date_from: dateFrom, date_to: dateTo })}`);
+  reportSummary(dateFrom?: string, dateTo?: string, member?: string): Promise<{ income: number; expense: number; balance: number; count: number; categories: CategoryStat[] }> {
+    return request(`/api/reports/summary${toQuery({ date_from: dateFrom, date_to: dateTo, member })}`);
   },
-  reportUrl(dateFrom?: string, dateTo?: string): string {
+  reportUrl(dateFrom?: string, dateTo?: string, member?: string): string {
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
+    if (member) params.set("member", member);
     return `${BASE_URL}/api/reports/pdf${params.toString() ? `?${params}` : ""}`;
   },
-  reportTxtUrl(dateFrom?: string, dateTo?: string): string {
+  reportTxtUrl(dateFrom?: string, dateTo?: string, member?: string): string {
     const params = new URLSearchParams();
     if (dateFrom) params.set("date_from", dateFrom);
     if (dateTo) params.set("date_to", dateTo);
+    if (member) params.set("member", member);
     return `${BASE_URL}/api/reports/txt${params.toString() ? `?${params}` : ""}`;
+  },
+
+  // Family
+  getFamily(): Promise<Family | null> {
+    return request("/api/family").catch(() => null);
+  },
+  createFamily(name: string): Promise<Family> {
+    return request("/api/family/create", { method: "POST", body: JSON.stringify({ name }) });
+  },
+  joinFamily(invite_code: string): Promise<Family> {
+    return request("/api/family/join", { method: "POST", body: JSON.stringify({ invite_code }) });
+  },
+  leaveFamily(): Promise<void> {
+    return request("/api/family/leave", { method: "POST" });
+  },
+  listFamilyMembers(): Promise<FamilyMember[]> {
+    return request("/api/family/members");
   },
 };

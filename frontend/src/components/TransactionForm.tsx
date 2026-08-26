@@ -57,6 +57,8 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
     useState<string[]>(EXPENSE_CATEGORIES);
   const [accounts, setAccounts] = useState<{ id: number; name: string }[]>([]);
   const [accountId, setAccountId] = useState<string>("");
+  const [member, setMember] = useState<string>("");
+  const [familyMembers, setFamilyMembers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +67,14 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
     api
       .listAccounts()
       .then((accs) => setAccounts(accs.map((a) => ({ id: a.id, name: a.name }))))
+      .catch(() => {});
+    api
+      .getFamily()
+      .then((fam) => {
+        if (fam) return api.listFamilyMembers();
+        return [];
+      })
+      .then((ms) => setFamilyMembers(ms.map((m) => m.email.split("@")[0])))
       .catch(() => {});
   }, []);
 
@@ -91,6 +101,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
       setDescription(editing.description ?? "");
       setDate(editing.date);
       setAccountId(editing.account_id ? String(editing.account_id) : "");
+      setMember((editing as unknown as { member?: string | null }).member ?? "");
       setError(null);
     }
   }, [editing]);
@@ -106,6 +117,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
     setSubmitting(true);
     try {
       const account_id = accountId ? parseInt(accountId, 10) : null;
+      const memberVal = member.trim() || null;
       if (editing) {
         const data: TransactionInput = {
           type,
@@ -114,6 +126,7 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
           description: description.trim() || null,
           date,
           account_id,
+          member: memberVal,
         };
         await api.updateTransaction(editing.id, data);
         onCancelEdit();
@@ -125,10 +138,12 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
           description: description.trim() || null,
           date,
           account_id,
+          member: memberVal,
         };
         await api.createTransaction(data);
         setAmount("");
         setDescription("");
+        setMember("");
       }
       onSaved();
     } catch (err) {
@@ -237,6 +252,26 @@ export function TransactionForm({ onSaved, editing, onCancelEdit }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </label>
+
+      <label>
+        {t("member")}
+        <input
+          type="text"
+          list="member-suggestions"
+          placeholder={t("addMemberHint")}
+          maxLength={50}
+          value={member}
+          onChange={(e) => setMember(e.target.value)}
+        />
+        <datalist id="member-suggestions">
+          {familyMembers.map((m) => (
+            <option key={m} value={m} />
+          ))}
+          <option value="Мама" />
+          <option value="Тато" />
+          <option value="Дитина" />
+        </datalist>
       </label>
 
       {accounts.length > 0 && (
