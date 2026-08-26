@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, func
@@ -35,11 +36,15 @@ class Transaction(Base):
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(String(255), default=None)
     date: Mapped[datetime.date] = mapped_column(Date, nullable=False, index=True)
+    account_id: Mapped[int | None] = mapped_column(
+        ForeignKey("accounts.id"), nullable=True, index=True, default=None
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
 
     user: Mapped["User"] = relationship(back_populates="transactions")
+    account: Mapped[Optional["Account"]] = relationship()
 
     @property
     def amount(self) -> float:
@@ -169,3 +174,5 @@ class SharedAccess(Base):
     shared_with_email: Mapped[str] = mapped_column(String(255), nullable=False)
     permission: Mapped[str] = mapped_column(String(20), nullable=False, default="view")  # view|edit
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (sa.UniqueConstraint("owner_id", "shared_with_email", name="uq_shared_owner_email"),)

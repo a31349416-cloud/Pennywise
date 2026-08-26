@@ -1,3 +1,4 @@
+import os
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -29,27 +30,40 @@ from .routers import (
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_requests: int = 60, window_seconds: int = 60):
+    def __init__(
+        self,
+        app,
+        auth_max: int = 30,
+        api_max: int = 200,
+        window_seconds: int = 60,
+    ):
         super().__init__(app)
-        self.max_requests = max_requests
+        self.auth_max = auth_max
+        self.api_max = api_max
         self.window = window_seconds
         self.requests: dict[str, list[float]] = defaultdict(list)
 
     async def dispatch(self, request: Request, call_next):
-        # Only rate-limit auth endpoints
-        if request.url.path.startswith("/api/auth/"):
-            client_ip = request.client.host if request.client else "unknown"
+        path = request.url.path
+        # Stricter limit for auth, broader for all API to prevent abuse.
+        limit = None
+        key = None
+        if path.startswith("/api/auth/"):
+            limit = self.auth_max
+            key = f"auth:{request.client.host if request.client else 'unknown'}"
+        elif path.startswith("/api/"):
+            limit = self.api_max
+            key = f"api:{request.client.host if request.client else 'unknown'}"
+        if limit and key:
             now = time.time()
             cutoff = now - self.window
-            self.requests[client_ip] = [
-                t for t in self.requests[client_ip] if t > cutoff
-            ]
-            if len(self.requests[client_ip]) >= self.max_requests:
+            self.requests[key] = [t for t in self.requests[key] if t > cutoff]
+            if len(self.requests[key]) >= limit:
                 return StarletteJSONResponse(
                     {"detail": "Too many requests. Please try again later."},
                     status_code=429,
                 )
-            self.requests[client_ip].append(now)
+            self.requests[key].append(now)
         return await call_next(request)
 
 app = FastAPI(
@@ -58,12 +72,24 @@ app = FastAPI(
     version="0.3.0",
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$",
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_origins = os.environ.get("PENNYWISE_CORS_ORIGINS")
+if cors_origins:
+    # Comma-separated list of allowed origins for production (e.g. https://pennywise.example.com)
+    allowed = [o.strip() for o in cors_origins.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed,
+        allow_origin_regex=None,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$",
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 app.add_middleware(RateLimitMiddleware)
 
 Base.metadata.create_all(bind=engine)

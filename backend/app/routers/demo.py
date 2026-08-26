@@ -1,6 +1,7 @@
 import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import crud, models
@@ -41,9 +42,17 @@ def load_demo_data(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    # Prevent duplicate demo loads — check if user already has data.
+    existing_count = db.scalar(select(func.count()).select_from(models.Transaction).where(models.Transaction.user_id == user.id))
+    if existing_count and int(existing_count) > 0:
+        raise HTTPException(status_code=409, detail="Demo data already loaded. Clear transactions first.")
+
     today = datetime.date.today()
     year, month = today.year, today.month
-    last_day = 28
+    # Use actual month length instead of hardcoded 28.
+    import calendar
+
+    last_day = calendar.monthrange(year, month)[1]
 
     for tx in DEMO_TRANSACTIONS:
         day = min(tx["day"], last_day)
@@ -58,6 +67,8 @@ def load_demo_data(
         db.add(db_tx)
 
     for category, limit in DEMO_BUDGETS:
+        if crud.get_budget_by_category(db, category, user.id):
+            continue
         db_budget = models.Budget(
             user_id=user.id,
             category=category,

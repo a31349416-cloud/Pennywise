@@ -15,6 +15,7 @@ class TransactionBase(BaseModel):
     category: str = Field(min_length=1, max_length=50)
     description: str | None = Field(default=None, max_length=255)
     date: datetime.date
+    account_id: int | None = Field(default=None, description="Linked account id")
 
 
 class TransactionCreate(TransactionBase):
@@ -27,6 +28,7 @@ class TransactionUpdate(BaseModel):
     category: str | None = Field(default=None, min_length=1, max_length=50)
     description: str | None = Field(default=None, max_length=255)
     date: datetime.date | None = None
+    account_id: int | None = None
 
 
 class TransactionRead(TransactionBase):

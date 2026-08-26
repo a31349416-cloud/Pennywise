@@ -76,6 +76,11 @@ def get_tags_for_transaction(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    from .. import crud
+
+    tx = crud.get_transaction(db, tx_id, user.id)
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
     stmt = select(TransactionTag.tag_id).where(TransactionTag.transaction_id == tx_id)
     return list(db.scalars(stmt))
 
@@ -87,6 +92,11 @@ def set_tags_for_transaction(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    from .. import crud
+
+    tx = crud.get_transaction(db, tx_id, user.id)
+    if tx is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
     for link in db.scalars(
         select(TransactionTag).where(TransactionTag.transaction_id == tx_id)
     ):

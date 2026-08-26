@@ -1,3 +1,4 @@
+import calendar
 import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import RecurringTransaction, Transaction, User
+from ..models import RecurringTransaction, User
 
 router = APIRouter(prefix="/api/recurring", tags=["recurring"])
 
@@ -39,7 +40,10 @@ def _advance_next_date(r: RecurringTransaction) -> None:
         if m > 12:
             m = 1
             y += 1
-        day = min(r.day_of_month or r.next_date.day, 28)
+        day = min(
+            r.day_of_month or r.next_date.day,
+            calendar.monthrange(y, m)[1],
+        )
         r.next_date = datetime.date(y, m, day)
     elif freq == "yearly":
         r.next_date = r.next_date.replace(year=r.next_date.year + 1)
@@ -132,27 +136,6 @@ def process_due(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    today = datetime.date.today()
-    due = db.scalars(
-        select(RecurringTransaction).where(
-            RecurringTransaction.user_id == user.id,
-            RecurringTransaction.active == True,
-            RecurringTransaction.next_date <= today,
-        )
-    )
-    processed = 0
-    for r in due:
-        tx = Transaction(
-            user_id=user.id,
-            type=r.type,
-            amount_cents=r.amount_cents,
-            category=r.category,
-            description=r.description,
-            date=r.next_date,
-        )
-        db.add(tx)
-        _advance_next_date(r)
-        db.add(r)
-        processed += 1
-    db.commit()
+    # Delegate to single source of truth in crud to avoid drift between two implementations.
+    processed = crud.process_recurring(db, user.id)
     return {"processed": processed}

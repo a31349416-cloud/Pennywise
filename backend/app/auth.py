@@ -11,8 +11,18 @@ from . import models
 from .database import get_db
 
 SECRET_KEY = os.environ.get("PENNYWISE_SECRET_KEY", "dev-secret-change-in-production")
+if SECRET_KEY == "dev-secret-change-in-production":
+    import warnings
+
+    warnings.warn(
+        "PENNYWISE_SECRET_KEY not set — using insecure dev key. "
+        "Set a random value in production: python -c \"import secrets; print(secrets.token_hex(32))\"",
+        UserWarning,
+        stacklevel=2,
+    )
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+# Shorter expiry reduces window for stolen tokens. Frontend handles 401 by forcing relogin.
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day (was 7 days)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -43,13 +53,14 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int | None = payload.get("sub")
-        if user_id is None:
+        user_id_raw = payload.get("sub")
+        if user_id_raw is None:
             raise credentials_exception
-    except JWTError:
+        user_id = int(user_id_raw)
+    except (JWTError, ValueError, TypeError):
         raise credentials_exception
 
-    user = db.get(models.User, int(user_id))
+    user = db.get(models.User, user_id)
     if user is None:
         raise credentials_exception
     return user

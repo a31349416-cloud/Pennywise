@@ -1,6 +1,7 @@
 import csv
-import io
 import datetime
+import io
+from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -9,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..auth import get_current_user
-from ..crud import to_cents
 from ..database import get_db
 from ..models import User
 
 router = APIRouter(prefix="/api/csv", tags=["csv"])
 
-CSV_COLUMNS = ["id", "type", "amount", "category", "description", "date"]
+CSV_COLUMNS = ["id", "type", "amount", "category", "description", "date", "account_id"]
+CSV_REQUIRED = ["type", "amount", "category", "date"]
 
 
 @router.get("/export")
@@ -40,6 +41,7 @@ def export_csv(
                 "category": tx.category,
                 "description": tx.description or "",
                 "date": tx.date.isoformat(),
+                "account_id": tx.account_id or "",
             }
         )
     buffer.seek(0)
@@ -63,31 +65,61 @@ def import_csv(
 
     raw = file.file.read().decode("utf-8-sig", errors="replace")
     reader = csv.DictReader(io.StringIO(raw))
-    if reader.fieldnames is None or not set(CSV_COLUMNS[1:]) <= set(reader.fieldnames):
+    if reader.fieldnames is None or not set(CSV_REQUIRED) <= set(reader.fieldnames):
         raise HTTPException(
             status_code=422,
-            detail=f"CSV must contain columns: {', '.join(CSV_COLUMNS[1:])}",
+            detail=f"CSV must contain columns: {', '.join(CSV_REQUIRED)}",
         )
 
     imported, skipped = 0, 0
     for row in reader:
         try:
-            amount = float(row["amount"])
+            # Use string directly for Decimal to avoid float rounding (e.g. 0.29 -> 28 cents via float).
+            amount_str = row["amount"].strip()
+            if not amount_str:
+                raise ValueError
+            try:
+                dec = Decimal(amount_str)
+            except InvalidOperation:
+                raise ValueError
+            if dec <= 0:
+                raise ValueError
+            amount_cents_val = int(dec.quantize(Decimal("0.01")) * 100)
+            # Account linking if provided and valid
+            account_id = None
+            if row.get("account_id"):
+                try:
+                    aid = int(str(row["account_id"]).strip())
+                    if aid:
+                        acc = db.get(models.Account, aid)
+                        if acc and acc.user_id == user.id:
+                            account_id = aid
+                except (ValueError, TypeError):
+                    pass
             tx_type = row["type"].strip()
-            if tx_type not in ("income", "expense") or amount <= 0:
+            if tx_type not in ("income", "expense"):
                 raise ValueError
             tx = models.Transaction(
                 user_id=user.id,
                 type=tx_type,
-                amount_cents=to_cents(amount),
+                amount_cents=amount_cents_val,
                 category=row["category"].strip(),
                 description=(row.get("description") or "").strip() or None,
                 date=datetime.date.fromisoformat(row["date"].strip()),
+                account_id=account_id,
             )
         except (KeyError, ValueError):
             skipped += 1
             continue
         db.add(tx)
+        if account_id is not None:
+            acc = db.get(models.Account, account_id)
+            if acc:
+                if tx_type == "income":
+                    acc.balance_cents += amount_cents_val
+                else:
+                    acc.balance_cents -= amount_cents_val
+                db.add(acc)
         imported += 1
 
     db.commit()

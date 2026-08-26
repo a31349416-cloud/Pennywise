@@ -16,6 +16,16 @@ def to_major(cents: int | None) -> float:
     return round((cents or 0) / 100, 2)
 
 
+def _adjust_account_balance(
+    account: models.Account, tx_type: str, amount_cents: int, *, reverse: bool = False
+) -> None:
+    """Apply or revert a transaction's effect on an account balance."""
+    if tx_type == "income":
+        account.balance_cents += -amount_cents if reverse else amount_cents
+    else:  # expense
+        account.balance_cents += amount_cents if reverse else -amount_cents
+
+
 def list_transactions(
     db: Session,
     *,
@@ -26,6 +36,7 @@ def list_transactions(
     category: str | None = None,
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
+    account_id: int | None = None,
 ) -> list[models.Transaction]:
     stmt = (
         select(models.Transaction)
@@ -40,6 +51,8 @@ def list_transactions(
         stmt = stmt.where(models.Transaction.date >= date_from)
     if date_to:
         stmt = stmt.where(models.Transaction.date <= date_to)
+    if account_id is not None:
+        stmt = stmt.where(models.Transaction.account_id == account_id)
     return list(db.scalars(stmt.offset(skip).limit(limit)))
 
 
@@ -53,6 +66,11 @@ def get_transaction(db: Session, tx_id: int, user_id: int) -> models.Transaction
 def create_transaction(
     db: Session, data: schemas.TransactionCreate, user_id: int
 ) -> models.Transaction:
+    # Validate account ownership if account_id is provided.
+    if data.account_id is not None:
+        acc = db.get(models.Account, data.account_id)
+        if acc is None or acc.user_id != user_id:
+            raise ValueError("Account not found")
     tx = models.Transaction(
         user_id=user_id,
         type=data.type.value,
@@ -60,8 +78,15 @@ def create_transaction(
         category=data.category,
         description=data.description,
         date=data.date,
+        account_id=data.account_id,
     )
     db.add(tx)
+    # Update linked account balance atomically with the transaction.
+    if data.account_id is not None:
+        acc = db.get(models.Account, data.account_id)
+        if acc is not None:
+            _adjust_account_balance(acc, tx.type, tx.amount_cents)
+            db.add(acc)
     db.commit()
     db.refresh(tx)
     return tx
@@ -70,19 +95,46 @@ def create_transaction(
 def update_transaction(
     db: Session, tx: models.Transaction, data: schemas.TransactionUpdate
 ) -> models.Transaction:
+    # Snapshot old values for balance reconciliation.
+    old_amount = tx.amount_cents
+    old_type = tx.type
+    old_account_id = tx.account_id
+
     updates = data.model_dump(exclude_unset=True)
+    if "account_id" in updates and updates["account_id"] is not None:
+        new_acc = db.get(models.Account, updates["account_id"])
+        if new_acc is None or new_acc.user_id != tx.user_id:
+            raise ValueError("Account not found")
     if "amount" in updates:
         tx.amount_cents = to_cents(updates.pop("amount"))
     if "type" in updates and updates["type"] is not None:
         updates["type"] = updates["type"].value
     for field, value in updates.items():
         setattr(tx, field, value)
+
+    # Reconcile account balances: revert old, apply new.
+    if old_account_id is not None:
+        old_acc = db.get(models.Account, old_account_id)
+        if old_acc is not None:
+            _adjust_account_balance(old_acc, old_type, old_amount, reverse=True)
+            db.add(old_acc)
+    if tx.account_id is not None:
+        new_acc = db.get(models.Account, tx.account_id)
+        if new_acc is not None:
+            _adjust_account_balance(new_acc, tx.type, tx.amount_cents)
+            db.add(new_acc)
     db.commit()
     db.refresh(tx)
     return tx
 
 
 def delete_transaction(db: Session, tx: models.Transaction) -> None:
+    # Revert linked account balance before deleting.
+    if tx.account_id is not None:
+        acc = db.get(models.Account, tx.account_id)
+        if acc is not None:
+            _adjust_account_balance(acc, tx.type, tx.amount_cents, reverse=True)
+            db.add(acc)
     db.delete(tx)
     db.commit()
 
@@ -231,6 +283,17 @@ def update_account(db: Session, acc: models.Account, data: schemas.AccountUpdate
 
 
 def delete_account(db: Session, acc: models.Account) -> None:
+    # Prevent orphaning transactions; unlink instead of leaving dangling FK.
+    linked = db.scalar(
+        select(func.count()).select_from(models.Transaction).where(models.Transaction.account_id == acc.id)
+    )
+    if linked and int(linked) > 0:
+        # Unlink transactions instead of blocking delete — keeps history but removes account ref.
+        db.execute(
+            models.Transaction.__table__.update()
+            .where(models.Transaction.account_id == acc.id)
+            .values(account_id=None)
+        )
     db.delete(acc)
     db.commit()
 
@@ -350,7 +413,12 @@ def delete_recurring(db: Session, rec: models.RecurringTransaction) -> None:
 
 
 def process_recurring(db: Session, user_id: int) -> int:
-    """Create transactions from due recurring items and advance next_date."""
+    """Create transactions from due recurring items and advance next_date.
+
+    Handles catch-up for missed periods (e.g. app not opened for months)
+    by looping until next_date is in the future. Safety cap prevents
+    runaway creation (e.g. daily over years).
+    """
     import datetime as _dt
     today = _dt.date.today()
     due = list(
@@ -364,30 +432,39 @@ def process_recurring(db: Session, user_id: int) -> int:
     )
     count = 0
     for rec in due:
-        tx = models.Transaction(
-            user_id=user_id,
-            type=rec.type,
-            amount_cents=rec.amount_cents,
-            category=rec.category,
-            description=rec.description,
-            date=rec.next_date,
-        )
-        db.add(tx)
-        if rec.frequency == "daily":
-            rec.next_date = rec.next_date + _dt.timedelta(days=1)
-        elif rec.frequency == "weekly":
-            rec.next_date = rec.next_date + _dt.timedelta(weeks=1)
-        elif rec.frequency == "monthly":
-            m = rec.next_date.month + 1
-            y = rec.next_date.year
-            if m > 12:
-                m = 1
-                y += 1
-            d = min(rec.day_of_month or rec.next_date.day, 28)
-            rec.next_date = _dt.date(y, m, d)
-        elif rec.frequency == "yearly":
-            rec.next_date = rec.next_date.replace(year=rec.next_date.year + 1)
-        count += 1
+        # Use day_of_month as anchor for monthly so Feb28 -> Mar31 recovers.
+        iterations = 0
+        while rec.next_date <= today and iterations < 365:
+            tx = models.Transaction(
+                user_id=user_id,
+                type=rec.type,
+                amount_cents=rec.amount_cents,
+                category=rec.category,
+                description=rec.description,
+                date=rec.next_date,
+            )
+            db.add(tx)
+            if rec.frequency == "daily":
+                rec.next_date = rec.next_date + _dt.timedelta(days=1)
+            elif rec.frequency == "weekly":
+                rec.next_date = rec.next_date + _dt.timedelta(weeks=1)
+            elif rec.frequency == "monthly":
+                m = rec.next_date.month + 1
+                y = rec.next_date.year
+                if m > 12:
+                    m = 1
+                    y += 1
+                d = min(
+                    rec.day_of_month or rec.next_date.day,
+                    calendar.monthrange(y, m)[1],
+                )
+                rec.next_date = _dt.date(y, m, d)
+            elif rec.frequency == "yearly":
+                rec.next_date = rec.next_date.replace(year=rec.next_date.year + 1)
+            else:
+                break
+            count += 1
+            iterations += 1
     db.commit()
     return count
 

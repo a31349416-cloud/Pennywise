@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,9 +80,53 @@ def _migrate_user_id(engine) -> None:
             )
 
 
+def _migrate_transaction_account(engine) -> None:
+    """Add nullable account_id to transactions for linking to accounts."""
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        if not inspector.has_table("transactions"):
+            return
+        columns = {c["name"] for c in inspector.get_columns("transactions")}
+        if "account_id" not in columns:
+            conn.execute(text("ALTER TABLE transactions ADD COLUMN account_id INTEGER REFERENCES accounts(id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_transactions_account_id ON transactions (account_id)"))
+
+
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, _record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+    finally:
+        cursor.close()
+
+
+def _migrate_shared_unique(engine) -> None:
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        if not inspector.has_table("shared_access"):
+            return
+        # Add unique index if missing
+        indexes = inspector.get_indexes("shared_access")
+        has_unique = any(
+            idx.get("unique") and set(idx.get("column_names", [])) == {"owner_id", "shared_with_email"}
+            for idx in indexes
+        )
+        if not has_unique:
+            # SQLite will allow duplicates until we add the index; clean duplicates first (keep earliest)
+            conn.execute(text("DELETE FROM shared_access WHERE id NOT IN (SELECT MIN(id) FROM shared_access GROUP BY owner_id, shared_with_email)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_owner_email ON shared_access (owner_id, shared_with_email)"))
+
+
 _migrate_float_money(engine)
 _migrate_user_id(engine)
+_migrate_transaction_account(engine)
+_migrate_shared_unique(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

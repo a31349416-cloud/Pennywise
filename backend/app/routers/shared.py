@@ -36,6 +36,14 @@ def create_shared(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    existing = db.scalar(
+        select(SharedAccess).where(
+            SharedAccess.owner_id == user.id,
+            SharedAccess.shared_with_email == data.email,
+        )
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Already shared with this user")
     s = SharedAccess(
         owner_id=user.id,
         shared_with_email=data.email,

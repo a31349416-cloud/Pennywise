@@ -19,6 +19,7 @@ def list_transactions(
     category: str | None = None,
     date_from: datetime.date | None = None,
     date_to: datetime.date | None = None,
+    account_id: int | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -31,6 +32,7 @@ def list_transactions(
         category=category,
         date_from=date_from,
         date_to=date_to,
+        account_id=account_id,
     )
 
 
@@ -40,7 +42,10 @@ def create_transaction(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return crud.create_transaction(db, data, user.id)
+    try:
+        return crud.create_transaction(db, data, user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/categories", response_model=list[str])
@@ -74,7 +79,10 @@ def update_transaction(
     tx = crud.get_transaction(db, tx_id, user.id)
     if tx is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    return crud.update_transaction(db, tx, data)
+    try:
+        return crud.update_transaction(db, tx, data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.delete("/{tx_id}", status_code=204)
