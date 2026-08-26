@@ -212,6 +212,20 @@ function Dashboard() {
           {activeTab === "dashboard" && (
             <>
               <MonthNav monthKey={monthKey} onChange={setMonthKey} />
+              {familyMembers.length > 0 && (
+                <div className="card" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span>{t("member")}:</span>
+                  <select value={selectedMember} onChange={(e) => setSelectedMember(e.target.value)}>
+                    <option value="">{t("allMembers")}</option>
+                    {familyMembers.map((m) => (
+                      <option key={m.id} value={m.email.split("@")[0]}>
+                        {m.email}
+                      </option>
+                    ))}
+                  </select>
+                  {/* also show raw member values from transactions */}
+                </div>
+              )}
               {summary && (
                 <SummaryCards
                   summary={summary}

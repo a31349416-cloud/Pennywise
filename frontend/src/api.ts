@@ -371,7 +371,7 @@ export const api = {
 
   // Family
   getFamily(): Promise<Family | null> {
-    return request("/api/family").catch(() => null);
+    return request<Family | null>("/api/family").catch(() => null as Family | null);
   },
   createFamily(name: string): Promise<Family> {
     return request("/api/family/create", { method: "POST", body: JSON.stringify({ name }) });
